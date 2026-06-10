@@ -49,25 +49,13 @@ harmonyos-arkts/
 
 ## 内容来源
 
-本 skill 的知识点提取自 `C:\Users\24559\Desktop\专业实习\` 下全部 .md 教学文件（共 9 个文件，去重后约 5 个独立内容源）：
+本 skill 的内容灵感主要来自两个方向：
 
-| 源文件 | 提取内容 |
-|--------|----------|
-| `day6/day7.md` | 图形绘制组件（Circle/Ellipse/Line/Polyline/Polygon/Rect/Path）、fill/stroke 属性、Path commands、三个标题栏组件 |
-| `day6/day8.md` | 通用属性全集：尺寸、位置、布局约束、边框、背景、透明度、显隐、禁用、图形变换、裁剪、多态样式 |
-| `课堂素材/day3.md` | Flex 布局（justifyContent/alignItems/alignContent/alignSelf/wrap）、Stack 层叠布局（zIndex/alignContent）、GridRow/GridCol 栅格（columns/breakpoints/gutter/span/offset/order） |
-| `day3/鸿蒙-副本(2).md` （≈ `鸿蒙-副本6_1/6_2/6_3.md`） | 像素单位（vp/fp/px/lpx）、颜色格式、Span/ImageSpan/ContainerSpan 行内组件、Button 类型/自定义/悬浮、TextInput/TextArea/InputType、国际化（资源限定词）、$$ 双向绑定、事件传参模式 |
-| `day7/day.md` + `day7/ets/` | 路由完整 API（back/showAlertBeforeBackPage/clear/getParams、页面栈 32 限制）、Tabs+TabContent 页签导航（barPosition 底部导航）、Grid 网格组件（columnsTemplate/rowsTemplate fr 单位）、EntryAbility 生命周期 + hilog 日志、组件 `export default` 导出规范、`$r()` 资源引用实战、**影片详情页参数接收（例35）**、**完整视频App架构 Tabs+Grid+路由（例36）**、**router vs Navigation 架构建议**、**Tabs+Grid导航枢纽模式** |
+- **鸿蒙开发者文档**：HarmonyOS NEXT 官方 API 参考、ArkTS 语言规范、组件属性说明等。在整理过程中发现官方文档虽全面但分散——导入路径、状态管理规则、组件限制散落在不同页面，于是将它们收敛到一份可检索的结构化知识库中。
 
-**去重策略**：多个副本文件（`6_5上午/day3.md` ≈ `课堂素材/day3.md`、`鸿蒙-副本6_2.md` ≈ `鸿蒙-副本6_3.md` ≈ `day3/鸿蒙-副本(2).md`）仅提取一次，不重复写入。
+- **个人实际开发中踩过的坑**：很多 PITFALLS.md 中的错误条目并非来自文档，而是自己在 DevEco Studio 里一行行编译报错后总结出来的。"为什么 `any` 编译不过"、"为什么改了属性 UI 不更新"、"为什么 router.pushUrl 回调不触发"——这些问题在文档里往往没有明确答案，只有亲身撞过才知道。
 
-**排除内容**：以下类型的内容未纳入 skill，因为它们属于概念性/历史性知识而非编程参考：
-- 移动通讯发展史（1G→5G）
-- HarmonyOS 版本命名史
-- "1+8+N"战略背景
-- DevEco Studio 安装步骤（属于开发环境配置，非 ArkTS 编程）
-- 模拟器创建/启动/关闭操作（同上）
-- ArkUI 框架设计理念（声明式 vs 命令式范式对比）
+也正是因为这种"文档 + 实战踩坑"的组合，才形成了 SKILL.md（规则速查）+ PITFALLS.md（编译错误对照）+ REFERENCE.md（API 速查）+ EXAMPLES.md（完整可运行示例）四层结构——查规则、对错误、找语法、看示例，各取所需。
 
 ## 迭代原则
 
