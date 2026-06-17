@@ -3,6 +3,30 @@
 > **快速定位**：用关键词搜索或 Read offset=行号 精准读取错误类别。按"报错关键词+现象"定位。
 > ⚠️ 行号为近似值，文件内容增删后会偏移——优先用关键词搜索定位。
 
+## 主题索引（按根因聚合）
+
+看见报错关键词 → 定位根因类别 → 一次性取回该类别下所有相关条目。
+
+| 根因类别 | 包含的错误 | 触发关键词 |
+|---------|-----------|-----------|
+| 🔴 类型系统 | any/unknown禁止、动态属性obj[key]、var禁止、结构化类型混用、可选参数位置 | `any`、`var`、`obj[`、`structural` |
+| 🔴 路由 | pushUrl缺RouterMode、回调签名废弃、getParams()undefined、back目标页不在栈、页面栈超32、页面未注册 | `router.pushUrl`、`getParams`、`main_pages` |
+| 🔴 状态管理 | @State直接改子属性、深层嵌套不更新、@State写在struct外、@Prop/@Link初始化、V2混用 | `@State`、`@Prop`、`@Observed`、`@ComponentV2` |
+| 🔴 组件规范 | fontSize误用、Alignment.Left/Right、Shape缺stroke、Color枚举、TabContent非Tabs子节点、标题栏通用属性 | `fontSize`、`Alignment`、`Circle`、`Color.` |
+| 🟡 导入/模块 | @kit vs @ohos、@system废弃、export default缺失、文件路径大小写 | `@ohos`、`@system`、`import` |
+| 🟡 性能 | @Prop深拷贝、状态变量关联过多组件、循环读取状态、@Provide滥用 | `@Prop`、`@Provide`、循环 |
+| 🟡 异步/事件 | animateTo全局废弃、getUIContext异步失效、router返回Promise、JSON.parse大整数 | `animateTo`、`getUIContext`、`.then()` |
+| 🟡 布局/样式 | List/Grid/Scroll缺显式宽高、像素单位混用、layoutWeight限制、position vs offset、opacity叠加 | `List`、`width`、`vp`、`layoutWeight` |
+| 🔵 V2 状态管理 | @Local/@Param/@Event/@Computed/@Monitor/@Provider/@Consumer 8类常见错误 | `@ComponentV2`、`@Local`、`@Param` |
+| 🔵 三层架构 | 循环依赖、反向依赖、common含业务逻辑、包类型选错 | `oh-package.json5`、`HAR`、`HSP` |
+| 🔵 网络请求 | localhost模拟器不可达、缺INTERNET权限、重复创建http实例、json-server端口 | `localhost`、`createHttp`、`INTERNET` |
+| 🔵 第三方SDK | 忘初始化、预览器不可用Camera、ohpm安装后未重启 | `@pura`、`AppUtil.init`、`ohpm` |
+| 🔵 自适应/手势 | displayPriority小数、Scroll缺固定尺寸、PinchGesture不跟手、FlexWrap容器限制 | `displayPriority`、`PinchGesture`、`FlexWrap` |
+
+---
+
+## 源索引（按条目线性排列）
+
 | 错误类别 | 行号 |
 |----------|------|
 | any/unknown 类型禁止 | 57 |

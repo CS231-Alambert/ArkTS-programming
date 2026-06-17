@@ -1,0 +1,28 @@
+{
+  "_说明": "三层规则: L1内置(25项) < L2项目(.arkts-check/rules.json) < L3用户(~/.arkts-check/user-rules.json)",
+  "_优先级": "L3 > L2 > L1。数字越大覆盖数字越小。",
+  "_示例用法": "bash scripts/self-check.sh . --project-rules .arkts-check/rules.json",
+
+  "skip": [],
+  "_skip说明": "跳过指定 Pass。例: [14, 19] 跳过多变量同行和fontSize检查",
+
+  "severity": {},
+  "_severity说明": "覆盖内置级别。fail=阻断, warn=警告, ignore=忽略。例: {\"18\": \"ignore\", \"23\": \"fail\"}",
+
+  "custom": [],
+  "_custom说明": "项目特定检查。name=检查名, pattern=grep正则, message=错误描述, severity=fail|warn",
+  "_custom示例": [
+    {
+      "name": "no-legacy-api",
+      "pattern": "import.*from.*@system\\.",
+      "message": "禁止使用 @system.* 旧式 API 导入",
+      "severity": "fail"
+    },
+    {
+      "name": "prefer-custom-button",
+      "pattern": "Button\\(.*\\).type\\(ButtonType\\.Normal\\)",
+      "message": "本项目应使用封装的 CustomButton 替代原生 Button",
+      "severity": "warn"
+    }
+  ]
+}

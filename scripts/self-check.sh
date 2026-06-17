@@ -1,12 +1,101 @@
 #!/usr/bin/env bash
 # self-check.sh — Automated post-generation validation for ArkTS files.
 # Scans for known error patterns that would cause ArkTS Compiler failures.
-# Usage: bash self-check.sh <project-root>
+# Usage: bash self-check.sh <project-root> [--skip 14,19] [--only 1,5,8] [--project-rules .arkts-check/rules.json]
 # Exit code 0 = all clear; non-zero = errors found.
 
 set -euo pipefail
 
 PROJECT_ROOT="${1:-.}"
+shift 2>/dev/null || true
+
+# ── Parse arguments ───────────────────────────────────
+SKIP_PASSES=""
+ONLY_PASSES=""
+PROJECT_RULES=""
+USER_RULES="$HOME/.arkts-check/user-rules.json"
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --skip) SKIP_PASSES="${2:-}"; shift 2 ;;
+    --only) ONLY_PASSES="${2:-}"; shift 2 ;;
+    --project-rules) PROJECT_RULES="${2:-}"; shift 2 ;;
+    --user-rules) USER_RULES="${2:-}"; shift 2 ;;
+    *) shift ;;
+  esac
+done
+
+# ── Load rules ─────────────────────────────────────────
+# L3 (user) > L2 (project) > L1 (built-in)
+SKIP_LIST=""
+SEVERITY_MAP=""  # format: "passNum:fail passNum:ignore"
+CUSTOM_RULES=""  # format: "name|pattern|message|severity"
+
+load_rules() {
+  local rules_file="$1"
+  if [ -n "$rules_file" ] && [ -f "$rules_file" ]; then
+    # Parse "skip" array
+    python3 -c "
+import json, sys
+try:
+  r = json.load(open('$rules_file'))
+  for p in r.get('skip', []): print(f'SKIP:{p}')
+  for p, s in r.get('severity', {}).items(): print(f'SEV:{p}:{s}')
+  for c in r.get('custom', []): print(f'CUST:{c[\"name\"]}|{c[\"pattern\"]}|{c[\"message\"]}|{c.get(\"severity\",\"fail\")}')
+except: pass
+" 2>/dev/null || true
+  fi
+}
+
+# L2 project rules
+if [ -n "$PROJECT_RULES" ] && [ -f "$PROJECT_RULES" ]; then
+  while IFS= read -r line; do
+    case "$line" in
+      SKIP:*) SKIP_LIST="$SKIP_LIST ${line#SKIP:}" ;;
+      SEV:*) SEVERITY_MAP="$SEVERITY_MAP ${line#SEV:}" ;;
+      CUST:*) CUSTOM_RULES="$CUSTOM_RULES
+${line#CUST:}" ;;
+    esac
+  done < <(load_rules "$PROJECT_RULES")
+fi
+
+# L3 user rules (override project)
+if [ -n "$USER_RULES" ] && [ -f "$USER_RULES" ]; then
+  while IFS= read -r line; do
+    case "$line" in
+      SKIP:*) SKIP_LIST="$SKIP_LIST ${line#SKIP:}" ;;
+      SEV:*) SEVERITY_MAP="$SEVERITY_MAP ${line#SEV:}" ;;
+      CUST:*) CUSTOM_RULES="$CUSTOM_RULES
+${line#CUST:}" ;;
+    esac
+  done < <(load_rules "$USER_RULES")
+fi
+
+# Also parse --skip argument (convenience, merges with rules)
+if [ -n "$SKIP_PASSES" ]; then
+  SKIP_LIST="$SKIP_LIST $(echo "$SKIP_PASSES" | tr ',' ' ')"
+fi
+
+# ── Helper functions ───────────────────────────────────
+is_skipped() {
+  local p="$1"
+  [ -n "$ONLY_PASSES" ] && ! echo " $ONLY_PASSES " | grep -q " $p " && return 0
+  echo " $SKIP_LIST " | grep -q " $p "
+}
+
+get_severity() {
+  local p="$1"
+  local default="$2"
+  local sev
+  sev=$(echo "$SEVERITY_MAP" | grep -oP "(^| )$p:\w+" | cut -d: -f2 | tail -1)
+  echo "${sev:-$default}"
+}
+
+# fail <pass-num> — increment error count and tag it
+fail() {
+  ERRORS=$((ERRORS + 1))
+  PASS_ERRORS="$PASS_ERRORS $1"
+}
 ETS_DIR="$PROJECT_ROOT/entry/src/main/ets"
 # Detect three-layer architecture and expand scan scope
 SCAN_DIRS=""
@@ -30,6 +119,8 @@ TIMESTAMP=$(date -Iseconds)
 
 echo "=== ArkTS Self-Check ==="
 echo "Scanning dirs: $SCAN_DIRS"
+[ -n "$PROJECT_RULES" ] && echo "Project rules: $PROJECT_RULES"
+[ -n "$USER_RULES" ] && echo "User rules: $USER_RULES"
 echo ""
 
 # ── Pass 1: @ohos.* imports ─────────────────────────
@@ -379,6 +470,46 @@ else
   echo "✅ OK (no components dir)"
 fi
 
+# ── Apply skip/severity overrides ──────────────────
+if [ -n "$SKIP_LIST" ] || [ -n "$SEVERITY_MAP" ]; then
+  OVERRIDE_MSG=""
+  for sp in $SKIP_LIST; do
+    sp=$(echo "$sp" | tr -d '[:space:]')
+    [ -z "$sp" ] && continue
+    OVERRIDE_MSG="$OVERRIDE_MSG Pass $sp→skip;"
+  done
+  for se in $SEVERITY_MAP; do
+    pn=$(echo "$se" | cut -d: -f1)
+    sv=$(echo "$se" | cut -d: -f2)
+    OVERRIDE_MSG="$OVERRIDE_MSG Pass $pn→$sv;"
+  done
+  [ -n "$OVERRIDE_MSG" ] && echo "  ⚙️  Overrides active:$OVERRIDE_MSG"
+  echo "  ℹ️  Skipped/demoted errors still counted above. Use --project-rules '' to see raw results."
+fi
+
+# ── Custom rules (L2/L3) ────────────────────────────
+if [ -n "$CUSTOM_RULES" ]; then
+  echo ""
+  echo "── Custom Rules ──"
+  echo "$CUSTOM_RULES" | while IFS='|' read -r name pattern message severity; do
+    [ -z "$name" ] && continue
+    CUST_COUNT=0
+    CUST_COUNT=$(grep -Prn "$pattern" $SCAN_DIRS --include="*.ets" 2>/dev/null | wc -l || echo 0)
+    CUST_COUNT=$(echo "$CUST_COUNT" | tr -d '[:space:]')
+    if [ "$CUST_COUNT" -gt 0 ] 2>/dev/null; then
+      if [ "$severity" = "fail" ]; then
+        echo "  ❌ FAIL — [$name] $message ($CUST_COUNT occurrence(s))"
+        grep -Prn "$pattern" $SCAN_DIRS --include="*.ets" 2>/dev/null || true
+        ERRORS=$((ERRORS + 1))
+      else
+        echo "  ⚠️  WARNING — [$name] $message ($CUST_COUNT occurrence(s))"
+      fi
+    else
+      echo "  ✅ OK — [$name]"
+    fi
+  done
+fi
+
 # ── Write checkpoint ────────────────────────────────
 mkdir -p "$(dirname "$CHECK_FILE")"
 cat > "$CHECK_FILE" << JSONEOF
@@ -389,6 +520,27 @@ cat > "$CHECK_FILE" << JSONEOF
   "status": "$([ "$ERRORS" -eq 0 ] && echo 'PASS' || echo 'FAIL')"
 }
 JSONEOF
+
+# ── Append to history (cross-session Bucket-Seal) ──
+HISTORY_FILE="$PROJECT_ROOT/.arkts-check/history.jsonl"
+python3 -c "
+import json, os
+entry = json.load(open('$CHECK_FILE'))
+entry['passed'] = $ERRORS == 0
+entry['passes_run'] = 25
+h = []
+if os.path.exists('$HISTORY_FILE'):
+    for line in open('$HISTORY_FILE'):
+        try: h.append(json.loads(line.strip()))
+        except: pass
+h.append(entry)
+with open('$HISTORY_FILE', 'w') as f:
+    for e in h[-50:]:  # keep last 50 runs
+        f.write(json.dumps(e, ensure_ascii=False) + '\n')
+count = len(h)
+if count > 0 and count % 10 == 0:
+    print(f'  📊 {count} history entries accumulated — run bash scripts/health-report.sh . for trend analysis')
+" 2>/dev/null || true
 
 echo ""
 echo "================================="

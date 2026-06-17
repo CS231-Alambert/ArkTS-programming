@@ -22,6 +22,39 @@ description: Generate correct, compilable ArkTS code for HarmonyOS NEXT (API 12+
 
 **门禁检查方法**: 写任何 `.ets` 文件前执行 `test -f .arkts-check/00-scan.json || echo "🔴 BLOCKED: Run Step 0 first"`。Step 2 前执行 `bash scripts/self-check.sh <项目根目录>`。
 
+### 🤖 Hook 级自动巡检（可选，推荐配置）
+
+在 `~/.claude/settings.json` 中配置 PreToolUse + PostToolUse Hook，将门禁从 prompt 级提升到**物理硬件级**——LLM 无法绕过：
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write",
+        "command": "test -f .arkts-check/00-scan.json || (echo '🔴 BLOCKED: Run Step 0 first → mkdir -p .arkts-check && python3 -c \"...\"' >&2 && exit 2)",
+        "description": "Block .ets writes before Step 0 scan"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "command": "cd \"$PROJECT_DIR\" && bash scripts/quick-check.sh . 2>&1 || true",
+        "description": "Silent auto-check after .ets writes (only outputs on failure)"
+      }
+    ]
+  }
+}
+```
+
+**效果**：
+- **PreToolUse**：00-scan.json 不存在 → 物理拒绝写入，LLM 跳过 Step 0 也不可能
+- **PostToolUse**：每次写完 .ets 瞬间静默自检，PASS 不打扰，FAIL 显示 ⚡ 摘要
+- 结合 Step 2 完整检查 → 形成"热路径快速筛查 + 冷路径完整检查"双保险
+
+> ⚠️ Hook 在 Claude Code 全局配置中生效。如果项目没有 `.arkts-check/` 目录，PreToolUse 会阻断所有 Write。
+> 新项目请先执行 `bash scripts/scaffold.sh` 或 Step 0 手动扫描。
+
 ---
 
 ### Step 0 — 前置扫描（强制 · 生成前）
