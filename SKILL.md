@@ -38,6 +38,8 @@ data={
   'media': os.listdir(f'{root}/entry/src/main/resources/base/media/') if os.path.exists(f'{root}/entry/src/main/resources/base/media/') else [],
   'pages': json.load(open(f'{root}/entry/src/main/resources/base/profile/main_pages.json'))['src'],
   'components': os.listdir(f'{root}/entry/src/main/ets/components/') if os.path.exists(f'{root}/entry/src/main/ets/components/') else [],
+  'hasInternetPermission': 'ohos.permission.INTERNET' in open(f'{root}/entry/src/main/module.json5').read() if os.path.exists(f'{root}/entry/src/main/module.json5') else False,
+  'isThreeLayer': os.path.exists(f'{root}/common') and os.path.exists(f'{root}/features') and os.path.exists(f'{root}/products'),
   'timestamp': '$(date -Iseconds)'
 }
 json.dump(data, open(f'{root}/.arkts-check/00-scan.json','w'), ensure_ascii=False, indent=2)
@@ -49,6 +51,8 @@ print('✓ 00-scan.json written')
 - 可用媒体资源: `.arkts-check/00-scan.json` → `media` 字段
 - 已注册页面: `.arkts-check/00-scan.json` → `pages` 字段
 - 已有组件: `.arkts-check/00-scan.json` → `components` 字段
+- 网络权限声明: `.arkts-check/00-scan.json` → `hasInternetPermission` 字段
+- 是否三层架构: `.arkts-check/00-scan.json` → `isThreeLayer` 字段
 - 需要时再读 `module.json5` 查看已声明权限
 
 ---
@@ -101,6 +105,9 @@ bash scripts/self-check.sh <项目根目录>
 - TabContent 直接作为 Tabs 子节点
 - `components/` 下用 `export default`
 - 颜色优先 `'#XXXXXX'`；fontSize 仅用于文本组件
+- 网络请求 URL 中使用 `localhost` → 提醒替换为本机 IP（模拟器不可达）
+- 引入第三方 SDK（@pura/*）→ 确认 `EntryAbility.onCreate` 中有初始化调用
+- 三层架构项目 → 检查 `oh-package.json5` 依赖方向为 products → features → common（不可反向）
 
 ---
 

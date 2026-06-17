@@ -40,6 +40,11 @@
 | 34 | **Tabs 底部导航（组件化）** | 2045 | Tabs/TabContent/barPosition/默认导入 |
 | 35 | **电影详情页（路由参数接收）** | 2152 | getParams/params判空/aboutToAppear/类型断言 |
 | 36 | **完整视频App架构（Tabs+Grid+路由）** | 2230 | 组件解耦/数据驱动/navigateTo/全链路参数传递 |
+| 37 | **HTTP GET + json-server** | **2425** | http/GET/json-server/模拟数据 |
+| 38 | **harmony-dialog 弹窗合集** | **2510** | DialogHelper/各种弹窗/第三方库 |
+| 39 | **三层架构脚手架** | **2660** | Common/Features/Products/HSP/HAR/依赖配置 |
+| 40 | **自适应布局 displayPriority + FlexWrap** | **2795** | 响应式/displayPriority/FlexWrap/自适应 |
+| 41 | **PinchZoom + Pan 组合手势** | **2885** | PinchGesture/PanGesture/GestureGroup/图片缩放拖拽 |
 
 ---
 
@@ -2417,6 +2422,399 @@ struct MovieDetail {
 > 4. **参数链路**：HomeTab → pushUrl(params) → Movie.ets → getParams() → @State → UI 渲染
 > 5. **注册须知**：pages/Pagea, Pageb, Pagec, Paged, Pagee, Movie 均需在 `main_pages.json` 中注册
 > 6. **错误处理**：路由跳转和参数获取均包裹在 try-catch 中，避免异常崩溃
+
+---
+
+## 37. HTTP GET + json-server
+
+```typescript
+// pages/ProductList.ets
+import { http } from '@kit.NetworkKit';
+
+interface Product {
+  id: number;
+  name: string;
+  price: number;
+}
+
+@Entry
+@Component
+struct ProductList {
+  @State products: Product[] = [];
+  @State loading: boolean = true;
+  @State errorMsg: string = '';
+  private httpReq = http.createHttp();  // 复用实例
+  private readonly BASE_URL: string = 'http://192.168.1.100:9988';  // 用本机 IP！
+
+  aboutToAppear(): void {
+    this.fetchProducts();
+  }
+
+  fetchProducts(): void {
+    this.loading = true;
+    this.httpReq.request(
+      `${this.BASE_URL}/products`,
+      { method: http.RequestMethod.GET }
+    ).then((res: http.HttpResponse): void => {
+      const data = JSON.parse(res.result as string) as Product[];
+      this.products = data;
+      this.loading = false;
+    }).catch((err: Error): void => {
+      this.errorMsg = `加载失败: ${err.message}`;
+      this.loading = false;
+    });
+  }
+
+  build() {
+    Column() {
+      if (this.loading) {
+        Text('加载中...').fontSize(18)
+      } else if (this.errorMsg) {
+        Column() {
+          Text(this.errorMsg).fontColor(Color.Red)
+          Button('重试').onClick(() => this.fetchProducts())
+        }
+      } else {
+        List() {
+          ForEach(this.products, (item: Product, index: number) => {
+            ListItem() {
+              Row() {
+                Text(item.name).fontSize(18).layoutWeight(1)
+                Text(`￥${item.price}`).fontColor(Color.Red)
+              }.width('100%').padding(15).border({ width: { bottom: 1 }, color: '#EEE' })
+            }
+          }, (item: Product, index: number): string => `${item.id}_${index}`)
+        }.width('100%').layoutWeight(1)
+      }
+    }.width('100%').height('100%')
+  }
+}
+```
+
+> **配套 json-server 启动命令**：`json-server --watch db.json --port 9988 --host 192.168.x.x`
+
+---
+
+## 38. harmony-dialog 弹窗合集
+
+```typescript
+import { DialogHelper, DialogAction, DateType } from '@pura/harmony-dialog';
+import { DateUtil, ToastUtil } from '@pura/harmony-utils';
+
+@Entry
+@Component
+struct DialogDemo {
+  // === 确认对话框 ===
+  showAlert(): void {
+    DialogHelper.showAlertDialog({
+      title: '确认删除',
+      content: '此操作不可恢复，确定吗？',
+      primaryButton: '取消',
+      secondaryButton: '确定',
+      onAction: (action: number): void => {
+        if (action === DialogAction.SURE) {
+          ToastUtil.showToast('已删除');
+        }
+      }
+    });
+  }
+
+  // === 提示框（带图标） ===
+  showTips(): void {
+    DialogHelper.showTipsDialog({
+      imageRes: $r('sys.media.ohos_app_icon'),
+      imageSize: { width: 80, height: 80 },
+      content: '操作成功！',
+      secondaryButton: { value: '知道了', fontColor: Color.Red },
+      onAction: (action: number): void => { /* ... */ }
+    });
+  }
+
+  // === 底部动作面板 ===
+  showSheet(): void {
+    DialogHelper.showBottomSheetDialog({
+      title: '请选择',
+      sheets: ['拍照', '从相册选择', '文件管理器'],
+      onAction: (index: number): void => {
+        console.log(`选中了第${index}项`);
+      }
+    });
+  }
+
+  // === 文本输入弹框 ===
+  showInput(): void {
+    DialogHelper.showTextInputDialog({
+      title: '支付密码',
+      placeholder: '请输入6位密码',
+      inputType: InputType.Password,
+      defaultFocus: true,
+      alignment: DialogAlignment.Bottom,
+      onAction: (action: number, dialogId: string, content: string): void => {
+        console.log(`输入内容: ${content}`);
+      }
+    });
+  }
+
+  // === 日期选择器 ===
+  showDatePicker(): void {
+    DialogHelper.showDatePickerDialog({
+      title: '选择日期',
+      dateType: DateType.YmdHms,
+      start: new Date('2020-01-01'),
+      end: new Date(),
+      onAction: (action: number, dialogId: string, date: Date): void => {
+        if (action === DialogAction.SURE) {
+          const str = DateUtil.getFormatDateStr(date, 'yyyy-MM-dd HH:mm:ss');
+          ToastUtil.showToast(`选中: ${str}`);
+        }
+      }
+    });
+  }
+
+  // === 进度条加载 ===
+  showLoading(): void {
+    DialogHelper.showLoadingProgress({
+      progress: 50,
+      content: '努力加载中...',
+      loadColor: Color.White,
+      autoCancel: false
+    });
+  }
+
+  build() {
+    Column({ space: 12 }) {
+      Button('确认对话框').onClick(() => this.showAlert())
+      Button('提示框').onClick(() => this.showTips())
+      Button('底部动作面板').onClick(() => this.showSheet())
+      Button('文本输入').onClick(() => this.showInput())
+      Button('日期选择器').onClick(() => this.showDatePicker())
+      Button('进度条加载').onClick(() => this.showLoading())
+    }.width('100%').height('100%').justifyContent(FlexAlign.Center)
+  }
+}
+```
+
+> **前置条件**：`ohpm i @pura/harmony-dialog` + `ohpm i @pura/harmony-utils`，在 UIAbility.onCreate 中初始化。
+
+---
+
+## 39. 三层架构脚手架
+
+```
+项目根路径/
+├── common/
+│   └── basic/           ← HSP 动态共享包（公共能力层）
+│       ├── src/main/ets/components/
+│       │   ├── ButtonCom.ets      ← 通用按钮组件
+│       │   └── index.ets          ← export * from './ButtonCom'
+│       └── Index.ets              ← export * from '../basic/src/main/ets/components'
+├── features/
+│   ├── home/            ← HAR 静态共享包（首页模块）
+│   │   ├── src/main/ets/views/
+│   │   │   ├── HomeView.ets
+│   │   │   └── index.ets
+│   │   └── Index.ets
+│   ├── shop/            ← HAR（商城模块）
+│   └── user/            ← HAR（我的模块）
+└── products/
+    └── entry/            ← Entry HAP（手机端入口）
+        └── src/main/ets/pages/
+            └── Index.ets
+```
+
+**common/basic/src/main/ets/components/ButtonCom.ets**：
+```typescript
+@Component
+export struct ButtonCom {
+  @Prop btn: string = '';
+
+  build() {
+    Button('通用按钮')
+      .backgroundColor(Color.Red)
+      .onClick(() => console.log(`收到: ${this.btn}`))
+  }
+}
+```
+
+**features/home/src/main/ets/views/HomeView.ets**：
+```typescript
+import { ButtonCom } from 'basic';  // 引用 common 层
+
+@Component
+export struct HomeView {
+  build() {
+    Column() {
+      Text('首页')
+      ButtonCom({ btn: '来自首页的数据' })  // 使用通用组件
+    }
+  }
+}
+```
+
+**products/entry/src/main/ets/pages/Index.ets**：
+```typescript
+import { HomeView } from 'home';
+import { ShopView } from 'shop';
+import { UserView } from 'user';
+
+@Entry
+@Component
+struct Index {
+  build() {
+    Tabs() {
+      TabContent() { HomeView() }.tabBar('首页')
+      TabContent() { ShopView() }.tabBar('商城')
+      TabContent() { UserView() }.tabBar('我的')
+    }
+    .barPosition(BarPosition.End)
+    .height('100%').width('100%')
+  }
+}
+```
+
+**依赖配置（products/entry/oh-package.json5）**：
+```json5
+{
+  "name": "entry",
+  "version": "1.0.0",
+  "dependencies": {
+    "basic": "file:../../common/basic",   // HSP
+    "home": "file:../../features/home",   // HAR
+    "shop": "file:../../features/shop",
+    "user": "file:../../features/user"
+  }
+}
+```
+
+> **关键规则**：依赖方向 products → features → common（不可反向）。配置完所有 oh-package.json5 后关闭项目重新打开验证无循环依赖报错。
+
+---
+
+## 40. 自适应布局 displayPriority + FlexWrap
+
+```typescript
+@Entry
+@Component
+struct AdaptiveDemo {
+  @State isExpanded: boolean = false;
+
+  build() {
+    Column() {
+      // === 切换容器宽度模拟不同屏幕 ===
+      Button(this.isExpanded ? '模拟窄屏' : '模拟宽屏')
+        .onClick(() => { this.isExpanded = !this.isExpanded; })
+        .margin({ bottom: 20 });
+
+      // === Part 1: displayPriority 隐藏能力 ===
+      Text('隐藏能力 (displayPriority)').fontSize(16).fontWeight(700)
+      Row() {
+        Image($r('sys.media.ohos_app_icon'))
+          .width(40).height(40).displayPriority(1)   // 低优先级，先隐藏
+        Image($r('sys.media.ohos_app_icon'))
+          .width(40).height(40).displayPriority(1)
+        Image($r('sys.media.ohos_app_icon'))
+          .width(40).height(40).displayPriority(2)   // 高优先级，后隐藏
+        Text('重要操作').fontSize(14).displayPriority(3)  // 最高优先级
+      }
+      .width(this.isExpanded ? '90%' : '60%')
+      .height(55).borderRadius(8)
+      .backgroundColor('#F5F5F5')
+      .justifyContent(FlexAlign.SpaceAround)
+      .margin({ bottom: 20 })
+
+      // === Part 2: FlexWrap 折行能力 ===
+      Text('折行能力 (FlexWrap.Wrap)').fontSize(16).fontWeight(700)
+      Flex({ wrap: FlexWrap.Wrap }) {
+        ForEach(['HTML', 'CSS', 'JavaScript', 'ArkTS', 'ArkUI', 'TypeScript'],
+          (item: string) => {
+            Text(item)
+              .width(this.isExpanded ? 90 : 70)
+              .height(36)
+              .margin(6)
+              .textAlign(TextAlign.Center)
+              .backgroundColor('#E3F2FD')
+              .borderRadius(4)
+              .fontSize(13)
+          }, (item: string): string => item)
+      }
+      .width(this.isExpanded ? '90%' : '70%')
+      .padding(10)
+    }
+    .width('100%').padding(16)
+  }
+}
+```
+
+> **要点**：① `displayPriority` 必须用整数区分优先级；② `FlexWrap` 仅在 `Flex` 容器中生效，`Row`/`Column` 中无效。
+
+---
+
+## 41. PinchZoom + Pan 组合手势
+
+```typescript
+@Entry
+@Component
+struct PinchPanDemo {
+  @State scaleValue: number = 1;
+  @State offsetX: number = 0;
+  @State offsetY: number = 0;
+  @State lastScale: number = 1;
+
+  // 缩放到原始大小
+  reset(): void {
+    this.scaleValue = 1;
+    this.lastScale = 1;
+    this.offsetX = 0;
+    this.offsetY = 0;
+  }
+
+  build() {
+    Column() {
+      Row() {
+        Button('重置').onClick(() => this.reset())
+      }.width('100%').padding(10)
+
+      Column() {
+        Image($r('sys.media.ohos_app_icon'))
+          .width(200)
+          .objectFit(ImageFit.Contain)
+          .scale({ x: this.scaleValue, y: this.scaleValue })
+          .translate({ x: this.offsetX, y: this.offsetY })
+          .gesture(
+            GestureGroup(GestureMode.Exclusive,
+              // 双指缩放
+              PinchGesture()
+                .onActionStart((): void => {
+                  this.lastScale = this.scaleValue;
+                })
+                .onActionUpdate((event: PinchGestureEvent): void => {
+                  this.scaleValue = this.lastScale * event.scale;
+                })
+                .onActionEnd((): void => {
+                  // 限制最小1倍，最大5倍
+                  this.scaleValue = Math.max(1, Math.min(5, this.scaleValue));
+                }),
+              // 单指拖拽
+              PanGesture()
+                .onActionUpdate((event: PanGestureEvent): void => {
+                  // 关键：除以当前缩放因子，保证拖拽跟手
+                  this.offsetX += event.offsetX / this.scaleValue;
+                  this.offsetY += event.offsetY / this.scaleValue;
+                })
+            )
+          )
+      }
+      .width(300).height(300)
+      .clip(true)
+      .backgroundColor('#F0F0F0')
+      .justifyContent(FlexAlign.Center)
+    }
+    .width('100%').height('100%')
+  }
+}
+```
+
+> **关键点**：① `GestureMode.Exclusive` 互斥模式，同一时间只响应一个手势；② 拖拽位移 ÷ 缩放因子，否则放大后拖拽跳跃；③ `onActionStart` 记录缩放起点，避免每次更新从 1 重新算。
 
 ---
 

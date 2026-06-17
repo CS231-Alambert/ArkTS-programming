@@ -26,6 +26,10 @@
 | Tabs/TabContent 页签 | 647 |
 | Grid 网格 (非栅格) | 677 |
 | EntryAbility 生命周期与 hilog | 710 |
+| **HTTP 请求模组** | **887** |
+| **第三方 SDK 速查** | **927** |
+| **自适应布局属性** | **982** |
+| **手势 API** | **1030** |
 
 ---
 
@@ -884,3 +888,244 @@ export default class EntryAbility extends UIAbility {
 | `COLOR_MODE_NOT_SET` | 跟随系统（推荐） |
 | `COLOR_MODE_DARK` | 强制深色模式 |
 | `COLOR_MODE_LIGHT` | 强制浅色模式 |
+
+---
+
+## HTTP 请求模组
+
+### 导入
+
+```typescript
+import { http } from '@kit.NetworkKit';
+```
+
+### 创建请求 + GET
+
+```typescript
+const httpReq = http.createHttp();  // 建议在组件中复用实例
+
+httpReq.request(
+  'http://192.168.1.100:9988/products',  // URL（模拟器不能用 localhost）
+  { method: http.RequestMethod.GET }
+).then((res: http.HttpResponse) => {
+  const data: string = res.result as string;
+  const parsed = JSON.parse(data);
+}).catch((err: Error) => {
+  console.error('HTTP GET failed:', err.message);
+});
+```
+
+### POST (JSON body)
+
+```typescript
+httpReq.request(
+  'http://192.168.1.100:9988/products',
+  {
+    method: http.RequestMethod.POST,
+    header: { 'Content-Type': 'application/json' },
+    extraData: JSON.stringify({ name: 'Product A', price: 99 })
+  }
+).then((res) => { /* ... */ }).catch((err: Error) => { /* ... */ });
+```
+
+### json-server 模拟后端
+
+```bash
+# 安装（全局一次）
+npm install -g json-server@0.17.4
+
+# 准备数据文件 db.json
+echo '{"products": [{"id":1,"name":"P1","price":99}]}' > db.json
+
+# 启动（必须用本机 IP，模拟器才可达）
+json-server --watch db.json --port 9988 --host 192.168.x.x
+```
+
+| HTTP 方法 | 对应 json-server 路由 |
+|-----------|----------------------|
+| GET | `/products` 列表, `/products/1` 单条 |
+| POST | `/products` 新增 |
+| PUT | `/products/1` 全量更新 |
+| PATCH | `/products/1` 部分更新 |
+| DELETE | `/products/1` 删除 |
+
+---
+
+## 第三方 SDK 速查
+
+### @pura/harmony-utils
+
+常用工具类（50+ 工具类，覆盖设备/存储/多媒体/网络/加密/UI/日志）：
+
+| 模块 | 功能 | 导入 |
+|------|------|------|
+| DeviceUtil | 设备信息（品牌/型号/系统版本） | `import { DeviceUtil } from '@pura/harmony-utils'` |
+| PreferencesUtil | 首选项存储 | `import { PreferencesUtil } from '@pura/harmony-utils'` |
+| NetworkUtil | 网络状态检测 | `import { NetworkUtil } from '@pura/harmony-utils'` |
+| LogUtil | 日志分级输出 | `import { LogUtil } from '@pura/harmony-utils'` |
+| DateUtil | 日期格式化/时间戳 | `import { DateUtil } from '@pura/harmony-utils'` |
+| ToastUtil | 轻量提示 | `import { ToastUtil } from '@pura/harmony-utils'` |
+
+### @pura/picker_utils
+
+```typescript
+import { PickerUtil, PhotoHelper, ScanUtil } from '@pura/picker_utils';
+
+// 相机（简易版，默认后置拍照）
+PickerUtil.cameraEasy().then((uri: string) => console.log(uri));
+
+// 相机（完整配置：前置/后置 + 照片/视频）
+PickerUtil.camera({ mediaTypes: [...], cameraPosition: camera.CameraPosition.CAMERA_POSITION_BACK });
+
+// 单选图片
+PickerUtil.selectPhoto().then((uris: string[]) => console.log(uris));
+
+// 多选图片+视频
+PhotoHelper.selectEasy({ maxSelectNumber: 12, MIMEType: photoAccessHelper.PhotoViewMIMETypes.IMAGE_VIDEO_TYPE });
+
+// 扫码
+ScanUtil.startScanForResult().then((result: object) => console.log(JSON.stringify(result)));
+```
+
+### @pura/harmony-dialog
+
+常用弹窗 API（均从 `@pura/harmony-dialog` 导入 `DialogHelper`）：
+
+| 方法 | 弹窗类型 |
+|------|---------|
+| `showAlertDialog({...})` | 确认对话框（双按钮） |
+| `showConfirmDialog({...})` | 信息确认（带 checkbox） |
+| `showTipsDialog({...})` | 提示框（可带图标） |
+| `showSelectDialog({...})` | 单选列表 |
+| `showTextInputDialog({...})` | 单行文本输入 |
+| `showCustomContentDialog({...})` | 自定义内容区 |
+| `showBottomSheetDialog({...})` | 底部动作面板 |
+| `showTextPickerDialog({...})` | 选择器弹框 |
+| `showDatePickerDialog({...})` | 日期选择器 |
+| `showLoadingProgress({...})` | 进度条加载 |
+| `showToast(...)` / `showToastTip({...})` | 吐司/带图标吐司 |
+
+### 初始化模板
+
+```typescript
+// EntryAbility.ts
+import { AppUtil } from '@pura/harmony-utils';
+import { DialogHelper } from '@pura/harmony-dialog';
+
+export default class EntryAbility extends UIAbility {
+  onCreate(want: Want, launchParam: AbilityConstant.LaunchParam) {
+    AppUtil.init(this.context);
+    DialogHelper.setDefaultConfig((config) => {
+      config.uiAbilityContext = this.context;
+    });
+  }
+}
+```
+
+---
+
+## 自适应布局属性
+
+### 7 种能力速查
+
+| 能力 | 属性/方式 | 适用容器 |
+|------|----------|---------|
+| 拉伸 | `flexGrow(n)` / `flexShrink(n)` | Row, Column, Flex |
+| 均分 | `justifyContent(FlexAlign.SpaceEvenly)` | Row, Column, Flex |
+| 占比 | `layoutWeight(n)` | Row, Column |
+| 缩放 | `aspectRatio(n)` 保持宽高比 | 任意 |
+| 延伸 | `List` 或 `Scroll` + 水平方向 | — |
+| 隐藏 | `displayPriority(n)` 整数越大越优先 | Row, Column |
+| 折行 | `Flex({ wrap: FlexWrap.Wrap })` | **仅 Flex** |
+
+### displayPriority 详解
+
+```
+displayPriority(1)   → 最低优先级（空间不足时先隐藏）
+displayPriority(2)   → 中等优先级
+displayPriority(3)   → 高优先级（最后被隐藏）
+
+[x, x+1) 区间内值视为同优先级：
+displayPriority(1.0) 与 displayPriority(1.9) 效果相同！
+```
+
+### Blank 组件
+
+自动填充容器剩余空间，仅在 Row/Column/Flex 中生效：
+
+```typescript
+Row() {
+  Text("左侧固定")
+  Blank()  // 自动占据剩余空间
+  Toggle({ type: ToggleType.Switch })
+}
+```
+
+### FlexWrap 换行
+
+```typescript
+Flex({ wrap: FlexWrap.Wrap }) {  // 空间不足时自动换行
+  ForEach(items, (item: string) => {
+    Text(item).width(100).height(100).margin(12)
+  })
+}
+.width('100%')
+```
+
+---
+
+## 手势 API
+
+### PinchGesture（双指缩放）
+
+```typescript
+@State scaleValue: number = 1;
+
+.gesture(
+  PinchGesture()
+    .onActionUpdate((event: PinchGestureEvent) => {
+      this.scaleValue = event.scale;
+    })
+)
+```
+
+### PanGesture（单指拖拽）
+
+```typescript
+@State offsetX: number = 0;
+@State offsetY: number = 0;
+
+.gesture(
+  PanGesture()
+    .onActionUpdate((event: PanGestureEvent) => {
+      this.offsetX += event.offsetX;
+      this.offsetY += event.offsetY;
+    })
+)
+```
+
+### GestureGroup（组合手势）
+
+```typescript
+.gesture(
+  GestureGroup(GestureMode.Exclusive,  // Exclusive=互斥, Parallel=并行, Sequence=顺序
+    PinchGesture()
+      .onActionUpdate((event: PinchGestureEvent) => {
+        this.scaleValue = event.scale;
+      }),
+    PanGesture()
+      .onActionUpdate((event: PanGestureEvent) => {
+        this.offsetX += event.offsetX / this.scaleValue;   // 除以缩放因子
+        this.offsetY += event.offsetY / this.scaleValue;
+      })
+  )
+)
+```
+
+### 手势模式枚举
+
+| GestureMode | 行为 |
+|-------------|------|
+| `GestureMode.Exclusive` | 互斥，同一时间只识别一个手势 |
+| `GestureMode.Parallel` | 并行，多个手势同时识别 |
+| `GestureMode.Sequence` | 顺序，按注册顺序依次识别 |

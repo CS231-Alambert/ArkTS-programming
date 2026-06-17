@@ -61,6 +61,10 @@
 | **V2 状态管理常见错误** | **1044** |
 | **export default 缺失** | **950** |
 | 快速排查流程 | 971 |
+| **三层架构依赖错误** | **1276** |
+| **网络请求错误** | **1320** |
+| **第三方 SDK 错误** | **1375** |
+| **自适应布局+手势错误** | **1435** |
 
 ---
 
@@ -1271,3 +1275,218 @@ struct Page {
 ```
 
 **修复**：V2 中 `@Local` 自动深度追踪对象/数组变化，无需 `@Observed`。直接删除 `@Observed` 装饰器即可。
+
+---
+
+## 三层架构依赖错误
+
+### 3L-1: 循环依赖
+
+**现象**：关闭项目重新打开后报错 `Circular dependency detected`
+
+```json5
+// common/basic 依赖 features/home，features/home 又依赖 common/basic
+// common/basic/oh-package.json5
+{ "dependencies": { "home": "file:../../features/home" } }  // ❌ 反向依赖
+```
+
+**规则**：依赖方向只能是 products → features → common。common 不得依赖 features 或 products，features 不得依赖 products。
+
+**修复**：检查所有 `oh-package.json5` 的 dependencies，确保无反向引用。配置完依赖后关闭项目重新打开确认无报错。
+
+### 3L-2: common 层包含业务逻辑
+
+**现象**：公共能力层的组件/工具被多个 feature 引用但包含了特定业务的判断逻辑。
+
+```typescript
+// common/basic/.../ButtonCom.ets
+if (this.btn === 'home页按钮') { ... }  // ❌ 业务逻辑不应在 common 层
+```
+
+**规则**：common 层仅提供与业务无关的公共代码：通用 UI 组件、工具类、网络封装、公共配置。业务逻辑属于 features 层。
+
+**修复**：将业务相关的条件/数据处理移到 features 层，common 层只保留纯通用逻辑。
+
+### 3L-3: 包类型选错
+
+**现象**：common 层创建为 HAR 包，被多个 feature 引用后总包体积膨胀。
+
+**规则**：
+- common（被大量模块引用）→ **HSP**（动态共享，运行时加载，避免重复打包）
+- features（仅被产品层引用）→ **HAR**（静态共享，编译时集成，加载更快）
+- products → **Entry HAP**（应用主入口）
+
+**修复**：如果 common 层已经被多个模块依赖且项目包体积明显偏大，考虑重建为 HSP 包并迁移代码。
+
+---
+
+## 网络请求错误
+
+### NET-1: localhost 模拟器不可达
+
+**现象**：模拟器中 HTTP 请求报错 `Failed to connect to localhost/127.0.0.1`
+
+```typescript
+// ❌ 模拟器中 localhost 指向模拟器自身，不是开发机
+httpRequest.request('http://localhost:9988/data')
+```
+
+**修复**：
+1. 打开 cmd/terminal，执行 `ipconfig` (Win) 或 `ifconfig` (Mac) 获取本机局域网 IP
+2. 启动 json-server 时指定本机 IP：`json-server --watch db.json --port 9988 --host 192.168.x.x`
+3. 将代码中 localhost 替换为 `http://192.168.x.x:9988/data`
+
+### NET-2: 忘记声明 INTERNET 权限
+
+**现象**：模拟器/真机运行时报错 `Permission denied`，网络请求无响应。预览器正常（预览器不检查权限）。
+
+**修复**：在 `entry/src/main/module.json5` 中声明：
+
+```json5
+"module": {
+  "requestPermissions": [
+    { "name": "ohos.permission.INTERNET" }
+  ]
+}
+```
+
+### NET-3: 每次请求创建新的 http 实例
+
+**现象**：频繁请求时性能下降、内存泄漏
+
+```typescript
+Button("请求").onClick(() => {
+  const req = http.createHttp()  // ❌ 每次点击创建新实例
+  req.request('http://...')
+})
+```
+
+**修复**：在组件或单例中复用 httpRequest 实例：
+
+```typescript
+private httpReq = http.createHttp()  // ✅ 组件生命周期内复用
+
+Button("请求").onClick(() => {
+  this.httpReq.request('http://...')
+})
+```
+
+### NET-4: json-server 端口被占用
+
+**现象**：启动 json-server 报错 `address already in use`
+
+**修复**：更换端口号 `--port 9989`，同时更新代码中的 URL 端口。
+
+---
+
+## 第三方 SDK 错误
+
+### SDK-1: 忘记在 UIAbility 中初始化
+
+**现象**：调用 SDK 方法时崩溃或返回 undefined
+
+```typescript
+// ❌ 未初始化就直接调用
+PickerUtil.cameraEasy()
+```
+
+**修复**：在 `EntryAbility.ts` 的 `onCreate` 中初始化：
+
+```typescript
+import { AppUtil } from '@pura/harmony-utils';
+
+export default class EntryAbility extends UIAbility {
+  onCreate(want: Want, launchParam: AbilityConstant.LaunchParam) {
+    AppUtil.init(this.context);   // ✅ 必须最先调用
+  }
+}
+```
+
+### SDK-2: 预览器中调用 Camera/Picker
+
+**现象**：预览器中调用相机/相册无反应或报错
+
+**规则**：Camera、Picker、扫码等硬件相关 API 在预览器中不支持，必须在模拟器或真机上测试。
+
+**修复**：开发阶段用条件判断跳过预览器不可用的功能，集成测试时用模拟器验证。
+
+### SDK-3: ohpm 安装后未重新打开项目
+
+**现象**：`ohpm i @pura/harmony-dialog` 执行成功，但 import 仍然报找不到模块
+
+**修复**：安装第三方依赖后，关闭 DevEco Studio 项目再重新打开，让 IDE 重新索引 `oh_modules`。
+
+### SDK-4: harmony-dialog 弹窗在 async 回调中失效
+
+**现象**：在 `setTimeout`、`setInterval` 或 Promise 回调中调用 `DialogHelper.showToast()` 无效果
+
+**修复**：确保弹窗调用在主线程上下文中。如果必须在异步回调中使用，先通过 `getContext()` 获取 UIContext 再调用。
+
+---
+
+## 自适应布局+手势错误
+
+### ADAPT-1: displayPriority 小数误解
+
+**现象**：设置了 `displayPriority(1.5)` 期望它比 `displayPriority(1)` 优先级更高
+
+```typescript
+Image(...).displayPriority(1.5)  // ❌ 与 displayPriority(1) 优先级相同！
+```
+
+**规则**：`[x, x+1)` 区间内视为同优先级。1.0 和 1.9 优先级完全相同。应使用整数区分优先级。
+
+**修复**：使用整数：`displayPriority(1)`、`displayPriority(2)`、`displayPriority(3)`。
+
+### ADAPT-2: Scroll 子组件缺固定宽高
+
+**现象**：Scroll 容器中的子元素宽度塌陷或显示不全
+
+```html
+Scroll() {
+  Row() { ... }  // ❌ 未设置固定宽度，水平滚动时塌陷
+}
+.scrollable(ScrollDirection.Horizontal)
+```
+
+**修复**：水平 Scroll 中 Row 需设置固定宽度或子元素有确定宽度：
+
+```html
+Scroll() {
+  Row() {
+    ForEach(arr, item => {
+      Column() { ... }.width(100).height(50)  // ✅ 固定尺寸
+    })
+  }
+}
+.scrollable(ScrollDirection.Horizontal)
+```
+
+### ADAPT-3: PinchGesture + PanGesture 组合不跟手
+
+**现象**：图片缩放后拖拽位移"跳跃"或"不跟手"
+
+```typescript
+PanGesture()
+  .onActionUpdate((event: PanGestureEvent) => {
+    this.offsetX += event.offsetX  // ❌ 未除以缩放因子
+  })
+```
+
+**修复**：拖拽位移必须除以当前缩放比例：
+
+```typescript
+PanGesture()
+  .onActionUpdate((event: PanGestureEvent) => {
+    this.offsetX += event.offsetX / this.scaleValue   // ✅
+    this.offsetY += event.offsetY / this.scaleValue
+  })
+```
+
+### ADAPT-4: FlexWrap 在 Column 容器中无效
+
+**现象**：在 Column 中设置 `wrap: FlexWrap.Wrap` 不换行
+
+**规则**：`FlexWrap.Wrap` 只在 `Flex` 容器中生效，在 `Row`/`Column` 中不工作。
+
+**修复**：需要换行能力时使用 `Flex({ wrap: FlexWrap.Wrap })` 替代 `Row`。

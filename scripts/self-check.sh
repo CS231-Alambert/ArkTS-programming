@@ -124,6 +124,62 @@ else
   echo "✅ OK"
 fi
 
+# ── Pass 10: localhost/127.0.0.1 in HTTP URLs ──────────
+echo -n "Pass 10: localhost in HTTP URLs ... "
+LOCALHOST_COUNT=0
+LOCALHOST_COUNT=$(grep -Prn "(localhost|127\.0\.0\.1)" "$ETS_DIR" --include="*.ets" 2>/dev/null | wc -l || echo 0)
+LOCALHOST_COUNT=$(echo "$LOCALHOST_COUNT" | tr -d '[:space:]')
+if [ "$LOCALHOST_COUNT" -gt 0 ] 2>/dev/null; then
+  echo "⚠️  WARNING — $LOCALHOST_COUNT occurrence(s) of localhost/127.0.0.1 found"
+  echo "  Emulator cannot reach localhost; use your machine's LAN IP with --host flag on json-server"
+  grep -Prn "(localhost|127\.0\.0\.1)" "$ETS_DIR" --include="*.ets" 2>/dev/null || true
+else
+  echo "✅ OK"
+fi
+
+# ── Pass 11: @ohos.net.http old imports ─────────────
+echo -n "Pass 11: @ohos.net.http imports ... "
+if grep -rn '@ohos\.net\.http' "$ETS_DIR" --include="*.ets" 2>/dev/null; then
+  echo "❌ FAIL — replace with import { http } from '@kit.NetworkKit'"
+  ERRORS=$((ERRORS + 1))
+else
+  echo "✅ OK"
+fi
+
+# ── Pass 12: http usage without INTERNET permission ──
+echo -n "Pass 12: http without INTERNET permission ... "
+HTTP_USAGE=0
+HTTP_USAGE=$(grep -rn 'http\.createHttp\|from.*@kit\.NetworkKit' "$ETS_DIR" --include="*.ets" 2>/dev/null | wc -l || echo 0)
+HTTP_USAGE=$(echo "$HTTP_USAGE" | tr -d '[:space:]')
+if [ "$HTTP_USAGE" -gt 0 ] 2>/dev/null; then
+  MODULE_JSON="$PROJECT_ROOT/entry/src/main/module.json5"
+  if [ -f "$MODULE_JSON" ]; then
+    if grep -q 'ohos\.permission\.INTERNET' "$MODULE_JSON" 2>/dev/null; then
+      echo "✅ OK (http used, permission granted)"
+    else
+      echo "❌ FAIL — http.createHttp used but ohos.permission.INTERNET not declared in module.json5"
+      ERRORS=$((ERRORS + 1))
+    fi
+  else
+    echo "⚠️  WARNING — module.json5 not found, cannot verify INTERNET permission"
+  fi
+else
+  echo "✅ OK (no http usage)"
+fi
+
+# ── Pass 13: displayPriority with decimal ────────────
+echo -n "Pass 13: displayPriority decimal ... "
+DP_DECIMAL=0
+DP_DECIMAL=$(grep -Prn 'displayPriority\(\s*\d+\.\d+' "$ETS_DIR" --include="*.ets" 2>/dev/null | wc -l || echo 0)
+DP_DECIMAL=$(echo "$DP_DECIMAL" | tr -d '[:space:]')
+if [ "$DP_DECIMAL" -gt 0 ] 2>/dev/null; then
+  echo "⚠️  WARNING — $DP_DECIMAL displayPriority() call(s) use decimal values"
+  echo "  [x, x+1) interval is treated as same priority; use integers instead"
+  grep -Prn 'displayPriority\(\s*\d+\.\d+' "$ETS_DIR" --include="*.ets" 2>/dev/null || true
+else
+  echo "✅ OK"
+fi
+
 # ── Write checkpoint ────────────────────────────────
 mkdir -p "$(dirname "$CHECK_FILE")"
 cat > "$CHECK_FILE" << JSONEOF
