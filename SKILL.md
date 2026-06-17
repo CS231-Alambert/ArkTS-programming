@@ -7,7 +7,116 @@ description: Generate correct, compilable ArkTS code for HarmonyOS NEXT (API 12+
 
 为 DevEco Studio 生成可直接编译运行的 ArkTS 代码。目标：手机应用、API 12+、HarmonyOS NEXT。
 
-## 核心规则（必须遵守）
+## ⛔ 强制门禁系统（HARD GATES）
+
+本 Skill 的工作流通过**磁盘检查点文件**强制执行。每步产出文件，下一步读取文件——跳过即阻断。
+
+| 步骤 | 产出检查点 | 前置条件 |
+|------|----------|---------|
+| Step 0 | `.arkts-check/00-scan.json` | — |
+| Step 1 | 代码文件 + `.arkts-check/01-generated.json` | `00-scan.json` 必须存在 |
+| Step 2 | `.arkts-check/02-checked.json` | `01-generated.json` 必须存在 |
+| Step 3 | 自检报告（对话输出） | `02-checked.json` 必须存在 |
+
+**🔴 铁律**: 写任何 `.ets` 文件前，先确认 `00-scan.json` 存在。不存在 → 立即停止，先执行 Step 0。
+
+**门禁检查方法**: 写任何 `.ets` 文件前执行 `test -f .arkts-check/00-scan.json || echo "🔴 BLOCKED: Run Step 0 first"`。Step 2 前执行 `bash scripts/self-check.sh <项目根目录>`。
+
+---
+
+### Step 0 — 前置扫描（强制 · 生成前）
+
+**门禁**: 无前置条件。此步骤是入口，始终允许执行。
+
+扫描项目当前状态，并将结果写入检查点文件：
+
+```bash
+mkdir -p .arkts-check
+python3 -c "
+import json, os; root='$(pwd)'
+data={
+  'media': os.listdir(f'{root}/entry/src/main/resources/base/media/') if os.path.exists(f'{root}/entry/src/main/resources/base/media/') else [],
+  'pages': json.load(open(f'{root}/entry/src/main/resources/base/profile/main_pages.json'))['src'],
+  'components': os.listdir(f'{root}/entry/src/main/ets/components/') if os.path.exists(f'{root}/entry/src/main/ets/components/') else [],
+  'timestamp': '$(date -Iseconds)'
+}
+json.dump(data, open(f'{root}/.arkts-check/00-scan.json','w'), ensure_ascii=False, indent=2)
+print('✓ 00-scan.json written')
+"
+```
+
+**必须记录到上下文**（生成代码时使用）:
+- 可用媒体资源: `.arkts-check/00-scan.json` → `media` 字段
+- 已注册页面: `.arkts-check/00-scan.json` → `pages` 字段
+- 已有组件: `.arkts-check/00-scan.json` → `components` 字段
+- 需要时再读 `module.json5` 查看已声明权限
+
+---
+
+### Step 1 — 生成代码（强制 · 有门禁）
+
+**门禁**: `test -f .arkts-check/00-scan.json` → 不存在则 STOP，回 Step 0。
+
+1. **先读取参考文档**: 遇到不确定的组件/API 时，用 `grep` 查 REFERENCE.md 确认存在且签名正确
+   ```bash
+   grep -n "<组件名>" REFERENCE.md
+   # 如果无结果 → 该 API 未文档化 → 使用已知安全的替代方案
+   # 如果未读过 PITFALLS.md → 先读开头索引表，定位相关条目
+   ```
+2. 使用 Step 0 扫描到的可用资源（media/pages/components）作为上下文
+3. 生成代码（一次性完成，不自修）
+4. **写入检查点**: `python3 -c "import json; json.dump({'timestamp':'$(date -Iseconds)','files':[]},open('.arkts-check/01-generated.json','w'))"`
+
+---
+
+### Step 2 — 生成后自检（强制 · 自动化）
+
+**门禁**: `test -f .arkts-check/01-generated.json` → 不存在则 STOP，回 Step 1。
+
+**运行自动检查脚本**:
+```bash
+bash scripts/self-check.sh <项目根目录>
+```
+
+脚本自动扫描以下 9 项并输出 PASS/FAIL：
+- Pass 1: `@ohos.*` 旧式导入
+- Pass 2: `new Function()` 动态执行
+- Pass 3: `Select.options()` 未文档化 API
+- Pass 4: `@State height/weight` 属性冲突
+- Pass 5: `router.pushUrl` 缺 RouterMode
+- Pass 6: `ForEach` 缺 key 生成器
+- Pass 7: import 不在文件顶部
+- Pass 8: `any`/`unknown`/`var` 禁用关键字
+- Pass 9: ForEach 回调中未使用的 index/idx 参数
+
+**脚本失败时（exit code ≠ 0）**: 根据输出修复 → 重新运行直到 PASS → 才进入 Step 3。
+
+---
+
+### Step 2 手动补充检查
+
+自动脚本未覆盖的手工检查项（完整清单见底部「生成代码检查清单」），核心关注：
+- `$r('app.media.xxx')` 资源名对照 00-scan.json 存在
+- `router.getParams()` 后判空
+- TabContent 直接作为 Tabs 子节点
+- `components/` 下用 `export default`
+- 颜色优先 `'#XXXXXX'`；fontSize 仅用于文本组件
+
+---
+
+### Step 3 — 报告自检结果
+
+**门禁**: `test -f .arkts-check/02-checked.json` → 不存在则 STOP，回 Step 2 运行自动检查。
+
+读取 `.arkts-check/02-checked.json` 的 `status` 字段：
+- `PASS` → 输出报告
+- `FAIL` → 根据错误输出修复 → 重新运行 `self-check.sh` 直到 PASS
+
+输出自检报告：自动脚本结果 + 底部检查清单逐项状态（✅/⏭/❌）。
+
+---
+
+## 核心规则
 
 ### 限制
 
@@ -23,9 +132,11 @@ description: Generate correct, compilable ArkTS code for HarmonyOS NEXT (API 12+
 
 ### 状态管理
 
-- `@State` 变量修改时必须整体替换对象引用，不能只改子属性。
-- 深层嵌套用 `@Observed` + `@ObjectLink`。
-- 父传子单向用 `@Prop`，双向用 `@Link`（父传 `$var`）。
+**V1 规则**：`@State` 修改必须整体替换对象引用。深层嵌套用 `@Observed` + `@ObjectLink`。父→子单向 `@Prop`，双向 `@Link`（父传 `$var`）。
+
+**V2 规则（API 12+ 推荐）**：组件用 `@ComponentV2`，内部状态 `@Local`，父传子 `@Param`，子传父 `@Event`，双向绑定 `this!!.var`，派生计算 `@Computed`。V1 和 V2 不可在同一组件混用。
+
+> 完整 V2 装饰器表、迁移指南、常见错误 → [REFERENCE.md](REFERENCE.md)「状态管理（V2）」+ [PITFALLS.md](PITFALLS.md)「V2 状态管理常见错误」。
 
 ### 导入路径（最高频错误来源）
 
@@ -88,44 +199,16 @@ import MyComponent from '../components/MyComponent'
 { "src": [ "pages/Index", "pages/Detail" ] }
 ```
 
-跳转（路径不要以 `/` 开头，必须与注册完全一致。**API 12+ 返回 Promise，旧回调签名已废弃**）:
+跳转（路径不以 `/` 开头，必须与 main_pages.json 一致；**API 12+ 返回 Promise，旧三参数回调已废弃**）:
 ```typescript
 import { router } from '@kit.ArkUI'
-// ✅ Promise 链（新 API）
-try {
-  router.pushUrl({ url: 'pages/Detail', params: { id: 123 } },
-    router.RouterMode.Standard)
-    .then((): void => { /* 跳转成功 */ })
-    .catch((err: Error): void => { console.error(err.message) })
-} catch (err) {
-  console.error(`路由异常: ${JSON.stringify(err)}`)
-}
-// ⚠ 旧三参数回调式 `(options, mode, callback)` 已废弃，勿用
+router.pushUrl({ url: 'pages/Detail', params: { id: 123 } }, router.RouterMode.Standard)
+  .then((): void => { /* 成功 */ }).catch((err: Error): void => { console.error(err.message) })
 ```
+返回: `router.back({ url: 'pages/Index' })`（目标页须在栈中）。拦截返回: `router.showAlertBeforeBackPage({ message: '...' })`。清空栈: `router.clear()`。
+接收参数: `const params = router.getParams() as Record<string, Object>`（无参返回 undefined，**必须先判空**）。
 
-**返回指定页面**（目标页必须在页面栈中存在）:
-```typescript
-router.back({ url: 'pages/Index', params: { from: 'Detail' } })
-```
-
-**返回前拦截询问框**:
-```typescript
-router.showAlertBeforeBackPage({ message: '确定要返回吗？' })
-router.back()  // 会先弹框，用户确认后才返回
-```
-
-**清空页面栈**（栈满32页时释放内存）:
-```typescript
-router.clear()  // 清空后需重新 pushUrl 或 replaceUrl
-```
-
-> ⚠️ **架构提示**：`@ohos.router` 耦合度较高，**不适合大型项目的解耦开发**。对于中大型项目，推荐使用 **Navigation + NavPathStack** 组件进行路由管理（支持更灵活的路由栈操作和组件级复用）。小型项目/学习阶段使用 router 完全没问题。
-
-**接收参数**:
-```typescript
-const params = router.getParams() as Record<string, Object>
-// 注意：无参数时返回 undefined，必须先判空
-```
+> 中大型项目推荐 **Navigation + NavPathStack** 替代 router。
 
 ### 权限声明
 
@@ -146,177 +229,59 @@ mgr.requestPermissionsFromUser(context, ['ohos.permission.CAMERA'])
 
 ### 图形绘制组件 (Shape)
 
-用于绘制2D图形，所有图形组件共享一套描边/填充属性。
+用于绘制2D图形（Circle/Ellipse/Line/Polyline/Polygon/Rect/Path），所有图形组件共享一套描边/填充属性（fill/stroke/strokeWidth等）。
+**Shape 必须在代码中显式调用 `.stroke()` 才会在白色背景上可见**。
 
-| 组件 | 用法 | 独有属性 |
-|------|------|----------|
-| `Circle` | `Circle({ width, height })` | - |
-| `Ellipse` | `Ellipse({ width, height })` | - |
-| `Line` | `Line()` | `.startPoint([x,y])`, `.endPoint([x,y])` |
-| `Polyline` | `Polyline({ width, height })` | `.points([[x,y],...])`, `.strokeLineJoin()` |
-| `Polygon` | `Polygon({ width, height })` | `.points([[x,y],...])` |
-| `Rect` | `Rect({ width, height, radius })` | `.radiusWidth()`, `.radiusHeight()`, `.radius()` |
-| `Path` | `Path({ width, height, commands })` | `.commands('M...')` 支持 M/L/H/V/C/S/Q/T/A/Z 命令 |
-
-**共用属性（描边/填充）**：
-```typescript
-Circle({ width: 150, height: 150 })
-  .fill(Color.Red)              // 填充颜色
-  .fillOpacity(0.3)             // 填充透明度 [0,1]
-  .stroke(Color.Blue)           // 边框颜色（不设则无边框）
-  .strokeWidth(3)               // 边框宽度
-  .strokeDashArray([10, 20])    // 虚线: [线段长, 间距长]
-  .strokeDashOffset(0)          // 虚线起点偏移
-  .strokeOpacity(0.8)           // 边框透明度 [0,1]
-  .strokeLineCap(LineCapStyle.Round)     // 端点样式: Butt/Round/Square
-  .strokeLineJoin(LineJoinStyle.Round)   // 拐角样式: Bevel/Miter/Round
-```
-
-**Path 命令速查**：
-| 命令 | 含义 | 示例 |
-|------|------|------|
-| `M x y` | 移动到 | `M0 0` |
-| `L x y` | 画线到 | `L50 50` |
-| `H x` | 水平线 | `H100` |
-| `V y` | 垂直线 | `V100` |
-| `C x1 y1 x2 y2 x y` | 三次贝塞尔 | - |
-| `Q x1 y1 x y` | 二次贝塞尔 | - |
-| `A rx ry rot large sweep x y` | 椭圆弧 | - |
-| `Z` | 闭合路径 | - |
-
-> 完整代码示例见 [REFERENCE.md](REFERENCE.md)「图形绘制」章节和 [EXAMPLES.md](EXAMPLES.md) §24。
+> 组件列表、共用属性、Path 命令速查 → [REFERENCE.md](REFERENCE.md)「图形绘制组件」。完整示例 → [EXAMPLES.md](EXAMPLES.md) §24。
 
 ### 标题栏组件 (TitleBar)
 
-导入：`import { ComposeTitleBar, SelectTitleBar, TabTitleBar } from '@kit.ArkUI'`
+`ComposeTitleBar`（普通页）、`SelectTitleBar`（下拉切换）、`TabTitleBar`（仅一级页面）。
+三者均从 `@kit.ArkUI` 导入，**不支持通用属性**（width/height 等不生效）。
 
-| 组件 | 适用场景 | 关键参数 |
-|------|----------|----------|
-| `ComposeTitleBar` | 普通页（一/二级） | `title`, `subtitle`, `item`(左侧头像), `menuItems`(右侧菜单) |
-| `SelectTitleBar` | 下拉菜单切换页 | `selected`, `options`, `onSelected`, `hidesBackButton` |
-| `TabTitleBar` | **仅一级页面**，页签切换 | `tabItems`, `swiperContent`(@BuilderParam) |
-
-> **注意**：标题栏组件**不支持通用属性**（width/height 等不生效）。
-> `TabTitleBar` 仅一级页面适用。完整示例见 [EXAMPLES.md](EXAMPLES.md) §25。
+> 完整参数、用法示例 → [REFERENCE.md](REFERENCE.md)「标题栏组件」+ [EXAMPLES.md](EXAMPLES.md) §25。
 
 ### 页签导航 (Tabs)
 
-```typescript
-Tabs() {
-  TabContent() { PageA() }.tabBar('首页')       // 简写：纯文本
-  TabContent() { PageB() }.tabBar('发现')       // TabContent 必须直接作为 Tabs 子级
-  TabContent() { PageC() }.tabBar('我的')
-}
-.barPosition(BarPosition.End)   // End=底部导航，Start=顶部导航（默认）
-```
+`TabContent` 必须直接作为 `Tabs` 子节点，不包裹在 Column/Row 中。`barPosition(BarPosition.End)` = 底部导航（仅一级页面）。
 
-| 属性 | 说明 |
-|------|------|
-| `barPosition(BarPosition.End)` | 底部导航（重要：仅一级页面能设 End） |
-| `barPosition(BarPosition.Start)` | 顶部（默认值） |
-| `scrollable(false)` | 禁止滑动切换 |
-| `.onChange((index: number) => {})` | 页签切换回调 |
-| `.tabBar(component)` | 自定义 TabBar（传入 @Builder 函数） |
+> 完整属性、Tabs+Grid 导航枢纽模式 → [REFERENCE.md](REFERENCE.md)「Tabs/TabContent 页签」+ [EXAMPLES.md](EXAMPLES.md) §12, §34, §36。
 
-> **组件复用模式**：每个 TabContent 放一个独立 `@Component`，从 `../components/` 导入，用 `export default` 导出。
+### 通用属性速查
 
-**Tabs + Grid 导航枢纽模式**（常见于视频/电商 App 首页）：
-```typescript
-// 主页面：Tabs 框架
-Tabs() {
-  TabContent() { HomeTab() }.tabBar('首页')
-  TabContent() { DiscoverTab() }.tabBar('发现')
-  // ...
-}
-.barPosition(BarPosition.End)
+尺寸（width/height/layoutWeight/constraintSize）、位置（position/offset）、边框、背景、透明度（opacity）、显隐（visibility）、变换（rotate/translate/scale）、裁剪（clip/clipShape）。
 
-// components/HomeTab.ets：Grid 图标导航 + Grid 内容列表
-Grid() {
-  ForEach(this.categories, (item: string, index: number) => {
-    GridItem() {
-      Column() { Image(...).width(50).height(50); Text(item) }
-    }
-    .onClick(() => {
-      router.pushUrl({ url: 'pages/DetailPage', params: { title: item } })
-    })
-  }, (item: string) => item)
-}
-.columnsTemplate('1fr 1fr 1fr 1fr 1fr')  // 5列图标区
-.width('100%').height(100)
-
-Grid() {
-  ForEach(this.dataList, (item: string) => {
-    GridItem() {
-      Column() { Image(...).width('100%').height(100); Text(item) }
-    }
-    .onClick(() => {
-      router.pushUrl({ url: 'pages/Movie', params: { title: item } })
-    })
-  }, (item: string) => item)
-}
-.columnsTemplate('1fr 1fr')  // 2列内容列表
-.width('100%').height(0).layoutWeight(1)  // 占满剩余空间
-```
-> 关键：Grid 必须显式设置宽高；ForEach 第三个参数必须是唯一 key 函数；路由 params 传参实现页面间的数据传递。
-
-### 通用属性速查 (Universal Attributes)
-
-| 类别 | 属性 | 说明 |
-|------|------|------|
-| **尺寸** | `width`, `height`, `size({width,height})` | 组件尺寸 |
-| | `padding`, `margin` | 内外边距 |
-| | `layoutWeight(n)` | 主轴权重分配（仅Row/Column/Flex），忽略自身尺寸 |
-| | `constraintSize({minW,maxW,minH,maxH})` | 尺寸约束范围 |
-| **位置** | `.direction(Direction.Rtl)` | 主轴布局方向（Ltr/Rtl/Auto），Column不生效 |
-| | `.position({x,y})` | 绝对定位（相对父容器左上角），不占位 |
-| | `.offset({x,y})` | 相对偏移（仅绘制偏移，不影响布局） |
-| **布局** | `.aspectRatio(n)` | 宽高比约束（=width/height） |
-| | `.displayPriority(n)` | 显示优先级（>1有值），空间不足时低优先级隐藏 |
-| **边框** | `.border({width,color,radius,style})` | 统一边框，四边可不同 |
-| | `.borderStyle()`, `.borderWidth()`, `.borderColor()`, `.borderRadius()` | 各边框属性单独设置 |
-| **背景** | `.backgroundColor()` | 背景色 |
-| | `.backgroundImage(url, ImageRepeat.XY)` | 背景图片+重复方式 |
-| | `.backgroundImageSize({width,height})` | 背景图尺寸 |
-| | `.backgroundImagePosition({x,y})` | 背景图位置 |
-| | `.backgroundBlurStyle(BlurStyle.Thin)` | 背景模糊效果 |
-| **透明度** | `.opacity(n)` | 不透明度[0,1]，子组件继承并叠加 |
-| **显隐** | `.visibility(Visibility.None)` | Hidden=隐藏但占位；None=隐藏不占位 |
-| **禁用** | `.enabled(false)` | 禁用交互（点击/触摸/焦点等不响应） |
-| **变换** | `.rotate({x,y,z,angle,centerX,centerY})` | 3D旋转 |
-| | `.translate({x,y,z})` | 3D平移 |
-| | `.scale({x,y,z,centerX,centerY})` | 3D缩放 |
-| **裁剪** | `.clip(true)` | 按父容器边缘裁剪子组件 |
-| | `.clipShape(new Circle(...))` | 按指定形状裁剪 |
-| | `.maskShape(new Rect(...).fill(Color.Gray))` | 按形状遮罩 |
-| **多态** | `.stateStyles({normal,pressed,disabled,focused,clicked,selected})` | 不同交互状态下切换样式 |
-
-> 更详细说明及常见误用见 [PITFALLS.md](PITFALLS.md)「通用属性常见错误」。
+> 完整属性表 → [REFERENCE.md](REFERENCE.md)「通用属性速查」。常见误用 → [PITFALLS.md](PITFALLS.md)「通用属性常见错误」。
 
 ## 生成代码检查清单
 
-- [ ] 无 `any` / `unknown` / `var`
-- [ ] 导入路径用 `@kit.*` 格式
-- [ ] `ForEach` 有唯一 key 生成函数
-- [ ] 对象属性修改用整体替换（不用 `.prop = `）
-- [ ] 新页面已在 `main_pages.json` 注册说明
-- [ ] 权限已在 `module.json5` 声明及运行时申请
-- [ ] 可选参数在必选参数之后
-- [ ] 组件属性链在子组件之前
-- [ ] 文件路径大小写与实际一致
-- [ ] 标题栏组件（ComposeTitleBar/SelectTitleBar/TabTitleBar）不使用通用属性
-- [ ] Path commands 字符串用单引号，命令字母大写
-- [ ] `visibility(Visibility.None)` vs `Visibility.Hidden` 区分清楚
-- [ ] List/Grid/Scroll 必须显式声明 `width` 和 `height`（可用 `height(0) + layoutWeight(1)` 占满剩余空间）
-- [ ] `fontSize`/`fontColor`/`fontWeight` 只用于 Text/Span/Button/TextInput 等文本组件，不用于 Column/Row
-- [ ] 颜色除 Red/Blue/Black/White 外，优先用十六进制字符串 `'#XXXXXX'` 而非 `Color.Xxx`（枚举不全）
-- [ ] `Alignment` / `Stack.alignContent` / `Column.align` 只使用 Start/End 语义（TopStart/Center/BottomEnd 等），不用 Left/Right
-- [ ] `router.pushUrl` 使用 Promise 链 `.then().catch()`，不用回调式签名
-- [ ] `animateTo` 使用 `this.getUIContext().animateTo()`，不用全局函数（API 12+ 废弃）
-- [ ] `getUIContext()` 在同步代码中捕获，不在 setInterval/setTimeout/Promise 等异步回调中直接调用
-- [ ] 涉及 `router`、`http`、`JSON.parse` 的方法体用 `try-catch` 包裹
-- [ ] `components/` 下组件用 `export default` 导出，引用用默认导入
-- [ ] `router.getParams()` 后先判空再使用（无参数时返回 undefined）
-- [ ] TabContent 组件放在 `../components/` 目录，用默认导入引入
+按清单逐项核对，在 Step 3 报告中逐条输出。
+
+- [ ] 无 `any` / `unknown` / `var`。必须显式声明类型。
+- [ ] 导入路径用 `@kit.*` 格式（非 `@ohos.*`）。
+- [ ] `ForEach` 有唯一 key 生成函数，且 key gen 中所有参数在函数体中使用（无 unused variable）。
+- [ ] 对象属性修改用整体替换（不用 `.prop = `）。
+- [ ] 新页面已在 `main_pages.json` 注册说明。
+- [ ] 权限已在 `module.json5` 声明及运行时申请。
+- [ ] 可选参数在必选参数之后。
+- [ ] 组件属性链（`.width()` 等）在子组件之前。
+- [ ] 文件路径大小写与实际一致。
+- [ ] 标题栏组件（ComposeTitleBar/SelectTitleBar/TabTitleBar）不使用通用属性。
+- [ ] Path commands 字符串用单引号，命令字母大写。
+- [ ] `visibility(Visibility.None)` vs `Visibility.Hidden` 区分清楚。
+- [ ] List/Grid/Scroll 显式声明 `width` 和 `height`（可用 `height(0) + layoutWeight(1)` 占满剩余空间）。
+- [ ] `fontSize`/`fontColor`/`fontWeight` 只用于 Text/Span/Button/TextInput 等文本组件，不用于 Column/Row。
+- [ ] 颜色除 Red/Blue/Black/White 外，优先用十六进制字符串 `'#XXXXXX'` 而非 `Color.Xxx`。
+- [ ] `Alignment` / `Stack.alignContent` / `Column.align` 只使用 Start/End 语义，不用 Left/Right。
+- [ ] `router.pushUrl` 有 `router.RouterMode.Standard` 第二参数。
+- [ ] `router.pushUrl` 返回 Promise，用 `.then().catch()` 链式调用。
+- [ ] `animateTo` 用 `this.getUIContext().animateTo()`，不用全局函数。
+- [ ] `getUIContext()` 在同步代码中捕获，不在 setInterval/setTimeout/Promise 异步回调中直接调用。
+- [ ] 同步方法（router.getParams/back、JSON.parse）用 try-catch；异步 Promise 方法（router.pushUrl、http.request）用 `.catch()`。
+- [ ] `$r('app.media.xxx')` 资源名在 `resources/base/media/` 目录中存在。
+- [ ] `components/` 下组件用 `export default` 导出。
+- [ ] `router.getParams()` 后先判空再使用。
+- [ ] TabContent 直接作为 Tabs 子节点，不包裹在 Column/Row 中。
 
 ### 子文件定位指南
 

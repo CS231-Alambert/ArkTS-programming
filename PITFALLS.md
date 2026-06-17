@@ -13,6 +13,7 @@
 | @State 直接改子属性 | 135 |
 | 深层嵌套不更新 (@Observed) | 149 |
 | ForEach 缺 key | 178 |
+| ForEach key gen 参数未使用 | 188 |
 | 组件属性链顺序 | 192 |
 | @State 写在 struct 外 | 208 |
 | **List/Grid/Scroll 缺显式宽高** | 223 |
@@ -57,6 +58,7 @@
 | **页面栈超 32 页** | **899** |
 | **TabContent 非 Tabs 直接子节点** | **917** |
 | **Grid 缺显式宽高** | **933** |
+| **V2 状态管理常见错误** | **1044** |
 | **export default 缺失** | **950** |
 | 快速排查流程 | 971 |
 
@@ -199,6 +201,36 @@ ForEach(this.list, (item: Item) => {
 }, (item: Item) => item.id.toString())  // key 必须唯一
 ```
 
+### ❌ ForEach key generator 参数未使用
+```
+报错: "'item' is declared but its value is never read."
+原因: key generator 函数参数如果声明了但未在函数体使用，ArkTSCheck 会报未读警告。
+      通常是因为 key gen 只用 index.toString() 而没用到 item 参数。
+```
+```typescript
+// ❌ 警告 —— item 声明了但未使用
+ForEach(this.list, (item: Item) => {
+  ListItem() { Text(item.name) }
+}, (_item: Item, index: number) => index.toString())
+
+// ✅ 正确 —— 使用 item 的某个属性做 key
+ForEach(this.list, (item: Item) => {
+  ListItem() { Text(item.name) }
+}, (item: Item) => item.id.toString())
+
+// ✅ 或用 index + 属性组合确保唯一
+ForEach(this.list, (item: Item) => {
+  ListItem() { Text(item.name) }
+}, (item: Item, index: number) => index.toString() + item.id)
+
+// ✅ 如果 item 本身就是 string/number 等原始值，直接用 item 做 key
+ForEach(['A', 'B', 'C'], (item: string) => {
+  Text(item)
+}, (item: string) => item)
+```
+> **通用原则**: ForEach key generator 中声明的所有参数都必须在函数体中使用。
+> 如果只需要 index，可以用 `(_item: Type)` 前缀下划线但仍需在 key 中使用。
+
 ### ❌ 组件属性链顺序错误
 ```
 报错: 编译失败
@@ -270,29 +302,50 @@ Column() {
 ### ❌ 函数可能抛异常，未显式处理
 ```
 报错: "Function may throw exceptions. Special handling is required."
-原因: ArkTS 严格模式要求所有可能抛出异常的函数调用（router.pushUrl、
-      网络请求、JSON.parse 等）必须用 try-catch 包裹，或在 Promise 链上挂 .catch()。
+原因: ArkTS 严格模式要求所有可能抛出异常的函数调用必须显式处理。
+      同步方法（router.getParams、router.back、JSON.parse 等）必须用 try-catch 包裹。
+      异步方法（router.pushUrl、http.request 等 Promise 返回的）可以用 try-catch 或 .catch()。
 ```
+
+**同步方法 —— 必须用 try-catch：**
 ```typescript
-// ❌ 警告
-onNavTo(route: string): void {
-  router.pushUrl({ url: route }, router.RouterMode.Standard,
-    (err: Error): void => { if (err) { console.error(err.message) } })
+// ❌ 未处理异常
+const params = router.getParams() as Record<string, Object>
+router.back()
+
+// ✅ 正确 —— try-catch
+try {
+  const params = router.getParams() as Record<string, Object>
+} catch (e) {
+  console.error(JSON.stringify(e))
 }
 
-// ✅ 正确 —— try-catch 包裹整个调用体
-onNavTo(route: string): void {
-  try {
-    router.pushUrl({ url: route }, router.RouterMode.Standard)
-      .then((): void => { /* ok */ })
-      .catch((err: Error): void => { console.error(err.message) })
-  } catch (err) {
-    console.error(`路由异常: ${JSON.stringify(err)}`)
-  }
+try {
+  router.back()
+} catch (e) {
+  console.error(JSON.stringify(e))
 }
 ```
-> **通用原则**：任何含 `router.pushUrl`、`http.request`、`JSON.parse` 的方法体都
-> 应该用 try-catch 包裹，Promise 链必须 `.catch()` 收尾。
+
+**异步方法 —— 优先用 .catch() 链式调用（简洁）：**
+```typescript
+// ❌ 未处理拒绝的 Promise
+router.pushUrl({ url: route }, router.RouterMode.Standard)
+
+// ✅ 正确 —— .catch() 链式（简洁推荐）
+router.pushUrl({ url: route }, router.RouterMode.Standard)
+  .catch((err: Error) => { console.error(JSON.stringify(err)) })
+
+// ✅ 正确 —— try-catch（更严格但啰嗦）
+try {
+  router.pushUrl({ url: route }, router.RouterMode.Standard)
+    .catch((err: Error) => { console.error(JSON.stringify(err)) })
+} catch (err) {
+  console.error(JSON.stringify(err))
+}
+```
+> **通用原则**：同步调用用 try-catch；Promise 返回的异步调用优先用 `.catch()`。
+> 涉及 `router`、`http`、`JSON.parse` 的方法体需显式处理。
 
 ---
 
@@ -326,25 +379,29 @@ import { MyComponent } from './Mycomponent'  // 报错
 import { MyComponent } from './MyComponent'
 ```
 
-### ❌ router.pushUrl 使用旧版回调签名
+### ❌ router.pushUrl 使用旧版回调签名或缺少 RouterMode 参数
 ```
-报错: "The signature '(options, RouterOptions, mode, RouterMode, callback)' is deprecated."
-原因: API 12+ 中 router.pushUrl 返回 Promise，旧的三参数回调式签名已废弃。
+报错: "The signature '(options: RouterOptions): Promise<void>' of 'router.pushUrl' is deprecated."
+      或 "The signature '(options, RouterOptions, mode, RouterMode, callback)' is deprecated."
+原因: API 12+ 中 router.pushUrl 有两个变更：
+      (1) 必须传 RouterMode 第二参数，单参数签名已废弃；
+      (2) 返回 Promise，旧的三参数回调式签名已废弃。
 ```
 ```typescript
-// ❌ 废弃（回调式）
+// ❌ 废弃（单参数，缺 RouterMode）
+router.pushUrl({ url: route })
+
+// ❌ 废弃（三参数回调式）
 router.pushUrl({ url: route }, router.RouterMode.Standard, (err) => {
   if (err) { console.error(err.message) }
 })
 
 // ✅ 正确（Promise 链式）
-try {
-  router.pushUrl({ url: route }, router.RouterMode.Standard)
-    .then((): void => { /* 成功 */ })
-    .catch((err: Error): void => { console.error(err.message) })
-} catch (err) {
-  console.error(`路由异常: ${JSON.stringify(err)}`)
-}
+router.pushUrl({ url: route }, router.RouterMode.Standard)
+  .then((): void => { /* 成功 */ })
+  .catch((err: Error): void => { console.error(err.message) })
+
+// ⚠️ catch 必须始终存在——Promise 不处理拒绝会触发 unhandledRejection
 ```
 
 ### ❌ animateTo 全局函数废弃
@@ -768,9 +825,27 @@ TextInput({ text: $$this.inputValue })
 
 ### ❌ Image 资源引用错误
 ```
-$r('app.media.xxx')  → 不加后缀名，不能放子文件夹
+报错: "Unknown resource name 'xxx'"
+$r('app.media.xxx')  → 不加后缀名，不能放子文件夹，资源名必须在 resources/base/media/ 中存在
 $rawfile('xxx.jpeg') → 必须加后缀名，支持子文件夹路径
 ```
+
+```typescript
+// ❌ 错误 —— 项目中无此资源
+$r('app.media.app_icon')       // 编译报错: Unknown resource name
+$r('app.media.poster_1')       // 编译报错（除非真有 poster_1.png）
+
+// ✅ 正确 —— 先检查 media 目录下有对应文件
+$r('app.media.background')     // 需要 background.png 存在
+$r('app.media.startIcon')      // 需要 startIcon.png 存在
+
+// ✅ 安全做法 —— 先用项目自带的已知资源占位
+// ls resources/base/media/ → background.png, startIcon.png
+// 生成代码前确认资源文件名，不要猜测
+```
+> **原则**：$r('app.media.xxx') 中的 xxx 必须对应 resources/base/media/ 目录下的文件（不含后缀）。
+> 生成代码前先 ls 确认媒体目录，不要凭空写资源名。
+> 同理，$rawfile 路径必须在 resources/rawfile/ 下。
 
 ### ❌ 使用废弃的 @system 导入
 ```
@@ -1043,3 +1118,156 @@ import MyComp from '../components/MyComp'
    - GridRow/GridCol → 换 Flex wrap
    - Flex 嵌套 Flex → 内层换 Column
    - @Builder 嵌套 → 内联或换 Column
+9. **V2 组件编译报错** → 检查以下常见错误：
+
+---
+
+## V2 状态管理常见错误（API 12+）
+
+### V2-1: V1 和 V2 装饰器混用
+
+```typescript
+// ❌ 错误：V1 @Component 内使用 V2 @Local
+@Component
+struct MyPage {
+  @Local count: number = 0   // 编译报错！@Local 仅 V2 组件可用
+}
+
+// ❌ 错误：V2 @ComponentV2 内使用 V1 @State
+@ComponentV2
+struct MyPage {
+  @State count: number = 0   // 编译报错！@State 仅 V1 组件可用
+}
+```
+
+**修复**：`@ComponentV2` 统一用 `@Local/@Param/@Event`；`@Component` 统一用 `@State/@Prop/@Link`。**不可混用**。
+
+### V2-2: `!!` 和 `$$` 混淆
+
+```typescript
+@ComponentV2
+struct Parent {
+  @Local text: string = ''
+  build() {
+    Child({ paramText: this!!.text })   // ✅ V2 双向绑定用 !!（两个感叹号）
+    //                                  // ❌ 不能用 $$ || this.text
+  }
+}
+```
+
+> V1 用 `$var` 传给 `@Link`；V2 用 `this!!.var` 传给 `@Param`。**`$$` 是 V1 语法，在 V2 中无效**。
+
+### V2-3: `@Param` 接收值后直接修改
+
+```typescript
+@ComponentV2
+struct Child {
+  @Param count: number = 0
+  build() {
+    Button('+1').onClick(() => { this.count++ })  // ❌ 运行时可能不更新父组件
+  }
+}
+```
+
+**修复**：子组件不应直接修改 `@Param`。需回传父组件用 `@Event`：
+
+```typescript
+@ComponentV2
+struct Child {
+  @Param count: number = 0
+  @Event onCountChange: (newVal: number) => void
+  build() {
+    Button('+1').onClick(() => {
+      this.onCountChange(this.count + 1)  // ✅ 通过 @Event 通知父
+    })
+  }
+}
+```
+
+### V2-4: `@Computed` 依赖未追踪
+
+```typescript
+@ComponentV2
+struct Page {
+  @Local items: string[] = []
+  @Computed
+  get itemCount(): number {
+    // ✅ @Local items 变化 → @Computed 自动重算
+    return this.items.length
+  }
+  @Computed
+  get firstItem(): string {
+    // ✅ 访问另一个 @Computed → 自动追踪依赖链
+    return this.items[0] ?? ''
+  }
+}
+```
+
+> `@Computed` 自动追踪 getter 内访问的所有 `@Local/@Param/@Consumer/@Computed`。**无需手动声明依赖列表**。
+
+### V2-5: `@Event` 参数类型不匹配
+
+```typescript
+@ComponentV2
+struct Child {
+  @Event onSelect: (id: number, name: string) => void  // 声明两个参数
+  build() {
+    Button('Select').onClick(() => { this.onSelect(1) })  // ❌ 缺第二个参数 → 类型报错
+  }
+}
+```
+
+**修复**：`@Event` 回调的参数数量和类型必须完全匹配声明。
+
+### V2-6: `@Provider` key 重复
+
+```typescript
+@ComponentV2
+struct AncestorA {
+  @Provider('theme') theme: string = 'dark'
+  build() { ... }
+}
+
+@ComponentV2
+struct AncestorB {
+  @Provider('theme') theme: number = 0  // ❌ key 'theme' 重复且类型不同
+  build() { ... }
+}
+```
+
+**修复**：同一个 key 在组件树中只能有一个 `@Provider`。多主题系统用不同 key 名（如 `'themeColor'` / `'themeMode'`）。
+
+### V2-7: `@Consumer` 缺少对应 `@Provider`
+
+```typescript
+@ComponentV2
+struct DeepChild {
+  @Consumer('userInfo') user: UserInfo | null = null
+  // 如果祖先中没有 @Provider('userInfo') → 编译报错
+  build() { ... }
+}
+```
+
+**修复**：确保组件树上至少有一个祖先组件声明了 `@Provider('userInfo')`。
+
+### V2-8: V1 `@Observed` 在 V2 中无效
+
+```typescript
+@Observed   // ❌ V2 中此装饰器无效果，浪费代码
+class DataModel {
+  name: string = ''
+}
+
+@ComponentV2
+struct Page {
+  @Local data: DataModel = new DataModel()
+  build() {
+    Text(this.data.name)
+    Button('Change').onClick(() => {
+      this.data.name = 'New'  // ✅ UI 自动更新（V2 @Local 自动深度追踪）
+    })
+  }
+}
+```
+
+**修复**：V2 中 `@Local` 自动深度追踪对象/数组变化，无需 `@Observed`。直接删除 `@Observed` 装饰器即可。

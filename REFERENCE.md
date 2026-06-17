@@ -5,7 +5,8 @@
 | 模块 | 行号 |
 |------|------|
 | @kit 导入路径表 | 3 |
-| 装饰器速查 (@Component/@State/@Prop/@Link等) | 30 |
+| 装饰器速查 V1 (@Component/@State/@Prop/@Link等) | 30 |
+| **状态管理 V2 (@ComponentV2/@Local/@Param/@Event等)** | **88** |
 | 生命周期钩子 | 126 |
 | 像素单位 (vp/fp/px/lpx) | 138 |
 | 颜色格式 | 151 |
@@ -79,13 +80,101 @@
 | `@StorageProp` | 单向绑定 AppStorage |
 
 ### 状态管理（V2 - API 12+ 推荐）
-| 装饰器 | 对应 V1 | 说明 |
-|--------|---------|------|
-| `@Local` | `@State` | 组件内部状态 |
-| `@Param` | `@Prop` | 父传子参数 |
-| `@Event` | - | 子传父回调 |
 
-V2 组件用 `@ComponentV2` 声明，双向绑定用 `$$` 操作符。
+V2 是 NEXT 主推的状态管理方案，组件用 `@ComponentV2` 声明。
+
+#### 装饰器速查
+
+| 装饰器 | 对应 V1 | 数据流向 | 说明 |
+|--------|---------|----------|------|
+| `@Local` | `@State` | 组件内部 | 组件内部状态，变化触发 UI 更新。支持简单类型+对象+数组 |
+| `@Param` | `@Prop` | 父→子（单向） | 接收父组件传入。**父传时无需 `$` 前缀**（不同于 V1 Link） |
+| `@Param @Once` | — | 父→子（仅一次） | 仅初始化时同步一次，后续父变化不再更新子 |
+| `@Event` | — | 子→父（回调） | 声明子组件可触发的事件回调，父通过 `(eventName)=>{...}` 接收 |
+| `@Provider('key')` | `@Provide` | 祖先→后代 | 跨层级提供数据，后代用 `@Consumer('key')` 接收 |
+| `@Consumer('key')` | `@Consume` | 后代←祖先 | 跨层级接收数据，必须与 `@Provider` 的 key 匹配 |
+| `@Computed` | — | 派生计算 | 基于其他状态属性计算派生值，依赖变化时自动重算。**仅 V2 支持** |
+
+#### V2 双向绑定 `!!` 操作符
+
+V2 中双向绑定用 `!!`（不同于 V1 的 `$$`），用于 `@Param` 变量传递给子组件的 `@Param`：
+
+```typescript
+@ComponentV2
+struct Parent {
+  @Local text: string = ''
+  build() { Column() { Child({ paramText: this!!.text }) } }
+  //                      父传子双向绑定:  this!!.property
+}
+
+@ComponentV2
+struct Child {
+  @Param paramText: string = ''   // 子用 @Param 接收，父变化自动同步
+  build() { Text(this.paramText) }
+}
+```
+
+> **注意**: V2 的 `!!` 仅用于 `@Local` 的双向绑定场景。父→子单向传值直接用 `this.prop`（无需 `!!`）。
+
+#### V2 vs V1 关键差异
+
+| 特性 | V1 | V2 |
+|------|----|----|
+| 组件声明 | `@Component` | `@ComponentV2` |
+| 内部状态 | `@State` | `@Local` |
+| 父→子传参 | `@Prop` / `@Link($var)` | `@Param`（单向）/ `this!!.var`（双向） |
+| 子→父回调 | 无原生支持 | `@Event` |
+| 双向绑定符 | `$`（父传 Link） | `!!`（父传 Param 双向） |
+| 派生计算 | 需手写 getter/refresh | `@Computed` 自动追踪 |
+| 跨层级 | `@Provide/@Consume` | `@Provider('key')/@Consumer('key')` |
+| 观察类 | `@Observed` + `@ObjectLink` | 无需 `@Observed`，`@Local` 自动深度追踪 |
+| 重复组件 | `@Builder` / `@BuilderParam` | `@Repeat` 替代 ForEach（更高效） |
+
+#### V2 完整页面模板
+
+```typescript
+@ComponentV2
+struct MyPage {
+  @Local count: number = 0
+  @Local items: string[] = ['A', 'B', 'C']
+  @Event onItemClick: (item: string) => void
+
+  @Computed
+  get totalChars(): number {
+    return this.items.join('').length
+  }
+
+  build() {
+    Column({ space: 12 }) {
+      Text(`Count: ${this.count}`).fontSize(20)
+      Text(`Total chars: ${this.totalChars}`)  // @Computed 自动更新
+      Button('+1').onClick(() => { this.count++ })
+
+      List() {
+        ForEach(this.items, (item: string) => {
+          ListItem() { Text(item) }
+            .onClick(() => { this.onItemClick(item) })  // 触发 @Event
+        }, (item: string) => item)
+      }
+    }
+    .width('100%').height('100%')
+  }
+}
+```
+
+#### V2 迁移指南
+
+从 V1 迁移到 V2 的步骤：
+1. `@Component` → `@ComponentV2`
+2. `@State` → `@Local`
+3. `@Prop` → `@Param`
+4. `@Link` (父传 `$var`) → `@Param` (父传 `this!!.var`)
+5. `@Provide/@Consume` → `@Provider('key')/@Consumer('key')`
+6. 子→父通信从 callback prop → `@Event`
+7. 手动计算的派生值 → `@Computed`
+8. `@Observed class` → 普通 class（`@Local` 自动深度追踪）
+
+> V1 和 V2 **不能在同一组件中混用**，但可以在同一项目的不同组件中分别使用。
 
 ---
 
