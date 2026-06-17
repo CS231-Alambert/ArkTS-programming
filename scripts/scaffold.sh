@@ -269,13 +269,13 @@ echo "Running Step 0 scan..."
 python3 -c "
 import json, os
 root='$([ "$THREE_LAYER" = true ] && echo "$ROOT_DIR" || echo "$ROOT")'
-entry_src=os.path.join(root, 'entry/src/main') if not '$THREE_LAYER' else os.path.join(root, 'products/entry/src/main')
+entry_src=os.path.join(root, 'entry/src/main') if '$THREE_LAYER' == 'false' else os.path.join(root, 'products/entry/src/main')
 data={
   'media': os.listdir(os.path.join(entry_src, 'resources/base/media/')) if os.path.exists(os.path.join(entry_src, 'resources/base/media/')) else [],
   'pages': ['pages/Index'],
   'components': [],
   'hasInternetPermission': True,
-  'isThreeLayer': $THREE_LAYER,
+  'isThreeLayer': True if '$THREE_LAYER' == 'true' else False,
   'timestamp': '$(date -Iseconds)'
 }
 json.dump(data, open(os.path.join(root, '.arkts-check/00-scan.json'),'w'), ensure_ascii=False, indent=2)
