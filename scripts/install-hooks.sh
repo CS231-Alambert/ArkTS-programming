@@ -10,24 +10,25 @@ set -euo pipefail
 SETTINGS_FILE="$HOME/.claude/settings.json"
 SKILL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
-echo "🔧 Installing hard-gate hooks from: $SKILL_DIR"
+echo "🔧 Installing hard-gate hooks"
+echo "   Skill dir: $SKILL_DIR"
 echo "   Target: $SETTINGS_FILE"
 echo ""
 
 # ── Build hook config ─────────────────────────────────
-HOOK_PRE=$(cat << 'PREEOF'
+HOOK_PRE=$(cat << PREEOF
       {
         "matcher": "Write",
-        "command": "test -f .arkts-check/00-scan.json || (printf '\\n🔴 HARD GATE BLOCKED: Step 0 not run.\\n→ Run: bash scripts/scaffold.sh <ProjectName> <com.example.app>\\n→ Or: mkdir -p .arkts-check && python3 -c \"import json,os;r=\\\".\\\";json.dump({\\\"pages\\\":[],\\\"media\\\":[],\\\"components\\\":[],\\\"timestamp\\\":\\\"\\\"},open(f\\\"{r}/.arkts-check/00-scan.json\\\",\\\"w\\\"))\"\\n' >&2 && exit 2)",
+        "command": "test -f \"\${PROJECT_DIR}/.arkts-check/00-scan.json\" || (printf '\\n🔴 HARD GATE BLOCKED: Step 0 not run.\\n→ Run: bash ${SKILL_DIR}/scripts/scaffold.sh <ProjectName> <com.example.app>\\n' >&2 && exit 2)",
         "description": "Block .ets writes before Step 0 scan"
       }
 PREEOF
 )
 
-HOOK_POST=$(cat << 'POSTEOF'
+HOOK_POST=$(cat << POSTEOF
       {
         "matcher": "Write",
-        "command": "if echo \"$FILE_PATH\" | grep -q '\\.ets$'; then cd \"$PROJECT_DIR\" && test -f scripts/quick-check.sh && bash scripts/quick-check.sh . 2>&1 || true; fi",
+        "command": "if echo \"\${FILE_PATH}\" | grep -q '\\.ets\$'; then cd \"\${PROJECT_DIR}\" && bash \"${SKILL_DIR}/scripts/quick-check.sh\" . 2>&1 || true; fi",
         "description": "Silent auto-check after .ets writes (OpenHuman subconscious loop pattern)"
       }
 POSTEOF
@@ -47,7 +48,7 @@ pre = hooks.setdefault('PreToolUse', [])
 post = hooks.setdefault('PostToolUse', [])
 
 # Check if our hooks are already installed
-pre_cmd = 'test -f .arkts-check/00-scan.json'
+pre_cmd = '00-scan.json'
 post_cmd = 'quick-check.sh'
 already_pre = any(pre_cmd in json.dumps(h) for h in pre)
 already_post = any(post_cmd in json.dumps(h) for h in post)
