@@ -473,18 +473,53 @@ fi
 # ── Apply skip/severity overrides ──────────────────
 if [ -n "$SKIP_LIST" ] || [ -n "$SEVERITY_MAP" ]; then
   OVERRIDE_MSG=""
+  ADJUST=0
+
+  # Re-check each skipped pass — if its grep pattern still matches, it contributed an error
+  check_pass_pattern() {
+    local pn="$1"
+    case "$pn" in
+      1)  grep -rn '@ohos\.' $SCAN_DIRS --include="*.ets" 2>/dev/null | grep -q . && return 0 || return 1 ;;
+      2)  grep -rn '\bnew Function\b' $SCAN_DIRS --include="*.ets" 2>/dev/null | grep -q . && return 0 || return 1 ;;
+      3)  grep -rn '\.options(' $SCAN_DIRS --include="*.ets" 2>/dev/null | grep -q . && return 0 || return 1 ;;
+      4)  (grep -rn '@State height:' $SCAN_DIRS --include="*.ets" 2>/dev/null || grep -rn '@State weight:' $SCAN_DIRS --include="*.ets" 2>/dev/null) | grep -q . && return 0 || return 1 ;;
+      8)  grep -Prn '\b(any|unknown|var)\b' $SCAN_DIRS --include="*.ets" 2>/dev/null | grep -v "catch\|console\|JSON\|'\$" | grep -q . && return 0 || return 1 ;;
+      11) grep -rn '@ohos\.net\.http' $SCAN_DIRS --include="*.ets" 2>/dev/null | grep -q . && return 0 || return 1 ;;
+      14) grep -Prn '\b(let|const)\s+\w+\s*=.*,\s*\w+\s*=' $SCAN_DIRS --include="*.ets" 2>/dev/null | grep -v '//' | grep -q . && return 0 || return 1 ;;
+      15) grep -Prn '(==|!=)\s*NaN|NaN\s*(==|!=)' $SCAN_DIRS --include="*.ets" 2>/dev/null | grep -q . && return 0 || return 1 ;;
+      16) grep -Prn '\bif\s*\(\s*\w+\s*=\s*[^=]' $SCAN_DIRS --include="*.ets" 2>/dev/null | grep -q . && return 0 || return 1 ;;
+      17) grep -Prn 'finally\s*\{[^}]*\b(return|break|continue|throw)\b' $SCAN_DIRS --include="*.ets" 2>/dev/null | grep -q . && return 0 || return 1 ;;
+      20) grep -Prn 'Alignment\.(Left|Right)\b' $SCAN_DIRS --include="*.ets" 2>/dev/null | grep -q . && return 0 || return 1 ;;
+      *) return 1 ;;  # Unknown pass — can't re-check
+    esac
+  }
+
   for sp in $SKIP_LIST; do
     sp=$(echo "$sp" | tr -d '[:space:]')
     [ -z "$sp" ] && continue
-    OVERRIDE_MSG="$OVERRIDE_MSG Pass $sp→skip;"
+    if check_pass_pattern "$sp"; then
+      ADJUST=$((ADJUST + 1))
+      OVERRIDE_MSG="$OVERRIDE_MSG Pass $sp→skip(-1);"
+    else
+      OVERRIDE_MSG="$OVERRIDE_MSG Pass $sp→skip(0);"
+    fi
   done
+
   for se in $SEVERITY_MAP; do
     pn=$(echo "$se" | cut -d: -f1)
     sv=$(echo "$se" | cut -d: -f2)
-    OVERRIDE_MSG="$OVERRIDE_MSG Pass $pn→$sv;"
+    if [ "$sv" = "ignore" ] && check_pass_pattern "$pn"; then
+      ADJUST=$((ADJUST + 1))
+      OVERRIDE_MSG="$OVERRIDE_MSG Pass $pn→$sv(-1);"
+    else
+      OVERRIDE_MSG="$OVERRIDE_MSG Pass $pn→$sv;"
+    fi
   done
-  [ -n "$OVERRIDE_MSG" ] && echo "  ⚙️  Overrides active:$OVERRIDE_MSG"
-  echo "  ℹ️  Skipped/demoted errors still counted above. Use --project-rules '' to see raw results."
+
+  ERRORS=$((ERRORS - ADJUST))
+  [ "$ERRORS" -lt 0 ] && ERRORS=0
+  [ -n "$OVERRIDE_MSG" ] && echo "  ⚙️  Overrides:$OVERRIDE_MSG"
+  echo "  📊 Errors adjusted: -$ADJUST → final count: $ERRORS"
 fi
 
 # ── Custom rules (L2/L3) ────────────────────────────
