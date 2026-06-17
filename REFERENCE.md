@@ -30,6 +30,9 @@
 | **第三方 SDK 速查** | **927** |
 | **自适应布局属性** | **982** |
 | **手势 API** | **1030** |
+| **Navigation 路由（替代 Router）** | **1134** |
+| **官方编程规范速查** | **1210** |
+| **状态管理性能规则** | **1280** |
 
 ---
 
@@ -1129,3 +1132,177 @@ Flex({ wrap: FlexWrap.Wrap }) {  // 空间不足时自动换行
 | `GestureMode.Exclusive` | 互斥，同一时间只识别一个手势 |
 | `GestureMode.Parallel` | 并行，多个手势同时识别 |
 | `GestureMode.Sequence` | 顺序，按注册顺序依次识别 |
+
+---
+
+## Navigation 路由（替代 Router）
+
+> ⚠️ Router 已停止功能更新。Navigation 是华为官方唯一长期演进推荐方案。
+> 对比：Navigation 无路由数限制、支持跨设备、引用传参、路由栈操作、路由拦截、共享元素动画。
+
+### NavPathStack 核心 API
+
+| API | 用途 |
+|-----|------|
+| `pushPath(info)` / `pushPathByName(name, param)` | 跳转 |
+| `pop()` / `popToName(name)` / `popToIndex(index)` | 返回 |
+| `replacePath(info)` / `replacePathByName(name, param)` | 替换当前页 |
+| `clear()` | 清空全部栈 |
+| `moveToTop(name)` / `moveIndexToTop(index)` | 栈操作 |
+| `getParamByIndex(index)` / `getParamByName(name)` | 获取参数 |
+| `setInterception(predicate)` | 路由拦截（如登录检查） |
+
+### 路由表配置
+
+`resources/base/profile/route_map.json`:
+```json
+{
+  "routerMap": [
+    {
+      "name": "MainPage",
+      "pageSourceFile": "src/main/ets/pages/MainPage.ets",
+      "buildFunction": "MainPageBuilder"
+    }
+  ]
+}
+```
+
+`module.json5` 中声明: `"routerMap": "$profile:route_map"`
+
+### 基本用法
+
+```typescript
+// 入口页面 (Index.ets)
+@Entry
+@Component
+struct Index {
+  @Provide('pageStack') pageStack: NavPathStack = new NavPathStack()
+
+  build() {
+    Navigation(this.pageStack) {
+      Column() {
+        Button('去详情').onClick(() => {
+          this.pageStack.pushPathByName('DetailPage', { id: 123 })
+        })
+      }
+    }
+    .navBarWidth('100%')
+    .mode(NavigationMode.Stack)
+  }
+}
+
+// 子页面 (Detail.ets)
+@Builder
+export function DetailBuilder() {
+  DetailPage()
+}
+
+@Component
+struct DetailPage {
+  @Consume('pageStack') pageStack: NavPathStack;
+
+  build() {
+    NavDestination() {
+      Column() { Text('详情页') }
+    }
+    .title('详情')
+  }
+}
+```
+
+### 多模块路由解耦（官方最佳实践）
+
+跨 HAR/HSP 模块跳转时，抽取独立 `RouterModule` 避免循环依赖：
+
+```typescript
+// common/router/RouterModule.ets
+export class RouterModule {
+  static builderMap: Map<string, WrappedBuilder<[object]>> = new Map()
+  static routerMap: Map<string, NavPathStack> = new Map()
+
+  static registerBuilder(name: string, builder: WrappedBuilder<[object]>): void { ... }
+  static createRouter(name: string, router: NavPathStack): void { ... }
+}
+```
+
+依赖关系：Entry.hap → (A.har, B.har) → RouterModule.har（模块间完全解耦）
+
+---
+
+## 官方编程规范速查
+
+来源：[ArkTS 编程规范](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides-V13/arkts-coding-style-guide-V13)
+
+### 要求级（原则上必须遵从）
+
+| # | 规则 | 正例 | 反例 |
+|----|------|------|------|
+| 1 | 每行只声明一个变量 | `let a = 1;\nlet b = 2;` | `let a = 1, b = 2;` |
+| 2 | NaN 必须用 `Number.isNaN()` | `Number.isNaN(x)` | `x == NaN` |
+| 3 | 条件表达式禁止赋值 | `if (isFoo)` | `if (isFoo = false)` |
+| 4 | finally 禁止 return/break/continue/throw | `finally { cleanup() }` | `finally { return 3 }` |
+| 5 | 数组遍历优先 Array 方法 | `arr.map(fn)` | `for (let i=0;...)` |
+
+### 建议级（最佳实践）
+
+| # | 规则 |
+|---|------|
+| 6 | 类名/枚举名/命名空间 `UpperCamelCase` |
+| 7 | 变量名/方法名 `lowerCamelCase`，常量全大写+下划线 |
+| 8 | 布尔变量用 `is`/`has`/`can` 前缀 |
+| 9 | 自定义组件 `UpperCamelCase`，@Builder 函数 `lowerCamelCase` |
+| 10 | 条件/循环语句必须使用大括号 `{}` |
+| 11 | 字符串使用单引号 |
+| 12 | 使用空格缩进（2 空格），禁止 Tab |
+| 13 | 每行不超过 120 字符 |
+| 14 | 对象属性超 4 个时每行一个 |
+
+### 高性能编程实践
+
+| # | 实践 |
+|---|------|
+| 15 | 使用 `const` 声明不变变量（基础+引用类型） |
+| 16 | 循环中提取不变量到外部 |
+| 17 | 避免使用 `ESObject`（仅跨语言调用场景用） |
+| 18 | 纯数值计算优先用 TypedArray (`Int8Array` 等) |
+| 19 | 减少全局属性查找，循环中缓存为局部变量 |
+| 20 | 使用函数参数传递代替闭包 |
+
+---
+
+## 状态管理性能规则
+
+来源：[状态管理最佳实践](https://developer.huawei.com/consumer/cn/doc/best-practices-V5/bpta-status-management-V5) + [CodeLinter @performance](https://developer.huawei.com/consumer/en/doc/harmonyos-guides-V5/ide_hp-arkui-use-object-link-to-replace-prop-V5)
+
+### 装饰器选择决策树
+
+```
+需要观察嵌套对象深层属性？
+  ├── 是 → @ObservedV2 + @Trace + @ComponentV2 + @Local/@Param
+  └── 否 → 复杂对象/class/数组？
+            ├── 是 → @State + @ObjectLink（子组件不修改时）或 @Link（需双向同步时）
+            └── 否 → @State + @Prop
+
+父子场景 or 跨层级场景？
+  ├── 父子 → @State + @Prop/@Link/@ObjectLink（开销 < @Provide+@Consume）
+  └── 跨层级（多级传递）→ @Provider + @Consumer
+```
+
+### 初始化约束矩阵
+
+| 装饰器 | 本地初始化 | 构造函数初始化 | 说明 |
+|--------|:--------:|:--------:|------|
+| `@State` | ✅ 必须 | 可选 | 本地值可被构造函数覆盖 |
+| `@Prop` | ❌ 禁止 | ✅ 必须 | 仅能通过构造函数 |
+| `@Link` | ❌ 禁止 | ✅ 必须 | 仅能通过构造函数 |
+| `@ObjectLink` | ❌ 禁止 | ✅ 必须 | 仅能通过构造函数 |
+| `@Provide` | ✅ 必须 | 可选 | — |
+| `@Consume` | ❌ 禁止 | ❌ 禁止 | 不能直接初始化 |
+| `@StorageLink` | ✅ 必须 | ❌ 禁止 | 不可由父组件传入 |
+| `@StorageProp` | ✅ 必须 | ❌ 禁止 | 不可由父组件传入 |
+
+### 性能关键数字
+
+- 每个状态变量关联组件 **≤ 20 个**，超出则提升到父组件
+- `@Prop` 嵌套超过 **5 层** 时深拷贝开销显著，改用 `@ObjectLink`
+- 装饰器开销优先级：`@State` 系列 < `@Provide+@Consume` < `LocalStorage` < `AppStorage`

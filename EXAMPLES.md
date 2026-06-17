@@ -45,6 +45,9 @@
 | 39 | **三层架构脚手架** | **2660** | Common/Features/Products/HSP/HAR/依赖配置 |
 | 40 | **自适应布局 displayPriority + FlexWrap** | **2795** | 响应式/displayPriority/FlexWrap/自适应 |
 | 41 | **PinchZoom + Pan 组合手势** | **2885** | PinchGesture/PanGesture/GestureGroup/图片缩放拖拽 |
+| 42 | **Navigation + NavPathStack 路由** | **2980** | Navigation/NavPathStack/NavDestination/pushPathByName |
+| 43 | **@ObjectLink 替代 @Prop 性能** | **3085** | @ObjectLink/@Observed/深拷贝/引用共享/性能对比 |
+| 44 | **MVVM 三层分离** | **3180** | ViewModel/Model/View/viewmodel目录/数据驱动 |
 
 ---
 
@@ -2815,6 +2818,259 @@ struct PinchPanDemo {
 ```
 
 > **关键点**：① `GestureMode.Exclusive` 互斥模式，同一时间只响应一个手势；② 拖拽位移 ÷ 缩放因子，否则放大后拖拽跳跃；③ `onActionStart` 记录缩放起点，避免每次更新从 1 重新算。
+
+---
+
+## 42. Navigation + NavPathStack 路由
+
+```typescript
+// resources/base/profile/route_map.json
+// { "routerMap": [{ "name": "DetailPage", "pageSourceFile": "src/main/ets/pages/Detail.ets", "buildFunction": "DetailBuilder" }] }
+
+// pages/Index.ets — 入口页
+import { DetailBuilder } from './Detail'
+
+interface RouteParams {
+  id: number;
+  title: string;
+}
+
+@Entry
+@Component
+struct Index {
+  @Provide('pageStack') pageStack: NavPathStack = new NavPathStack()
+
+  build() {
+    Navigation(this.pageStack) {
+      Column({ space: 12 }) {
+        Text('首页').fontSize(24).fontWeight(700)
+        Button('跳转详情（pushPath）').onClick(() => {
+          this.pageStack.pushPath({
+            name: 'DetailPage',
+            param: { id: 1, title: '来自首页' } as RouteParams
+          })
+        })
+      }.width('100%').height('100%').justifyContent(FlexAlign.Center)
+    }
+    .navBarWidth('100%')
+    .mode(NavigationMode.Stack)
+    .hideNavBar(true)
+  }
+}
+
+// pages/Detail.ets — 详情页
+@Builder
+export function DetailBuilder() {
+  DetailPage()
+}
+
+@Component
+struct DetailPage {
+  @Consume('pageStack') pageStack: NavPathStack;
+  @State title: string = '';
+  @State id: number = 0;
+
+  aboutToAppear(): void {
+    const params = this.pageStack.getParamByName('DetailPage') as RouteParams;
+    if (params) {
+      this.id = params.id;
+      this.title = params.title;
+    }
+  }
+
+  build() {
+    NavDestination() {
+      Column({ space: 16 }) {
+        Text(`详情 #${this.id}`).fontSize(22).fontWeight(700)
+        Text(`来源: ${this.title}`).fontSize(16).fontColor('#666')
+        Button('返回').onClick(() => this.pageStack.pop())
+      }.width('100%').height('100%').justifyContent(FlexAlign.Center)
+    }
+    .title(`详情 #${this.id}`)
+    .onBackPressed((): boolean => {
+      this.pageStack.pop();
+      return true;
+    })
+  }
+}
+```
+
+> **关键点**：① `@Provide` 声明 pageStack，`@Consume` 在子页面消费；② 路由表 + `pushPathByName` 可选；③ 模块解耦时抽取 RouterModule 统一管理所有路由栈。
+
+---
+
+## 43. @ObjectLink 替代 @Prop 性能对比
+
+```typescript
+// === 数据模型 ===
+@Observed
+class UserProfile {
+  name: string = '';
+  age: number = 0;
+  avatar: string = '';
+}
+
+// === ❌ 反例：@Prop 深拷贝（性能差） ===
+@Component
+struct PropChild {
+  @Prop user: UserProfile = new UserProfile();  // 深拷贝整个对象！
+
+  build() {
+    Column() {
+      Text(this.user.name)
+      Text(`年龄: ${this.user.age}`)
+    }
+  }
+}
+
+// === ✅ 正例：@ObjectLink 引用共享（官方推荐） ===
+@Component
+struct ObjectLinkChild {
+  @ObjectLink user: UserProfile;  // 共享引用，零拷贝
+
+  build() {
+    Column() {
+      Text(this.user.name)
+      Text(`年龄: ${this.user.age}`)
+      Button('修改').onClick(() => {
+        this.user.age += 1;  // 父组件同步更新
+      })
+    }
+  }
+}
+
+// === 父组件 ===
+@Entry
+@Component
+struct ParentDemo {
+  @State currentUser: UserProfile = new UserProfile();
+
+  aboutToAppear(): void {
+    this.currentUser.name = '张三';
+    this.currentUser.age = 25;
+    this.currentUser.avatar = 'icon.png';
+  }
+
+  build() {
+    Column({ space: 20 }) {
+      Text('父组件').fontSize(20).fontWeight(700)
+      Text(`姓名: ${this.currentUser.name}, 年龄: ${this.currentUser.age}`)
+
+      // ❌ 深拷贝 — 仅当子组件不需要修改时才可接受
+      PropChild({ user: this.currentUser })
+
+      // ✅ 引用共享 — 官方推荐
+      ObjectLinkChild({ user: this.currentUser })
+    }.width('100%').padding(20)
+  }
+}
+```
+
+> **选择规则**：① 子组件不修改状态值 → `@ObjectLink`（避免深拷贝）；② 需要双向同步 → `@Link`（传 `$var`）；③ 简单类型且子组件不修改 → `@Prop`。嵌套超过 5 层时深拷贝开销显著，必须用 `@ObjectLink`。
+
+---
+
+## 44. MVVM 三层分离
+
+```typescript
+// === Model 层 — 纯数据定义 ===
+// entry/src/main/ets/model/TaskModel.ets
+export interface TaskModel {
+  id: number;
+  title: string;
+  completed: boolean;
+}
+
+// === ViewModel 层 — 业务逻辑+状态 ===
+// entry/src/main/ets/viewmodel/TaskViewModel.ets
+import { TaskModel } from '../model/TaskModel';
+
+@Observed
+export class TaskViewModel {
+  tasks: TaskModel[] = [];
+  loading: boolean = false;
+
+  addTask(title: string): void {
+    const newTask: TaskModel = { id: Date.now(), title, completed: false };
+    this.tasks = [...this.tasks, newTask];  // 不可变更新
+  }
+
+  toggleTask(id: number): void {
+    this.tasks = this.tasks.map((t: TaskModel): TaskModel =>
+      t.id === id ? { ...t, completed: !t.completed } : t
+    );
+  }
+
+  get completedCount(): number {
+    return this.tasks.filter((t: TaskModel): boolean => t.completed).length;
+  }
+
+  async fetchTasks(): Promise<void> {
+    this.loading = true;
+    try {
+      // http.createHttp().request(...)  // 实际网络请求
+      await new Promise<void>(r => setTimeout(r, 500));  // 模拟
+      this.tasks = [{ id: 1, title: '学习 ArkTS', completed: false }];
+    } finally {
+      this.loading = false;
+    }
+  }
+}
+
+// === View 层 — 纯 UI 渲染 ===
+// entry/src/main/ets/pages/TaskPage.ets
+import { TaskViewModel } from '../viewmodel/TaskViewModel';
+
+@Entry
+@Component
+struct TaskPage {
+  @State viewModel: TaskViewModel = new TaskViewModel();
+  @State inputText: string = '';
+
+  aboutToAppear(): void { this.viewModel.fetchTasks(); }
+
+  build() {
+    Column() {
+      // 输入区
+      Row() {
+        TextInput({ placeholder: '输入任务', text: $$this.inputText })
+          .layoutWeight(1)
+        Button('添加').onClick(() => {
+          if (this.inputText.trim()) {
+            this.viewModel.addTask(this.inputText.trim());
+            this.inputText = '';
+          }
+        })
+      }.width('100%').padding(10)
+
+      // 统计
+      Text(`已完成: ${this.viewModel.completedCount} / ${this.viewModel.tasks.length}`)
+        .fontSize(14).fontColor('#666')
+
+      // 任务列表
+      if (this.viewModel.loading) {
+        Text('加载中...')
+      } else {
+        List() {
+          ForEach(this.viewModel.tasks, (task: TaskModel) => {
+            ListItem() {
+              Row() {
+                Checkbox()
+                  .select(task.completed)
+                  .onChange(() => this.viewModel.toggleTask(task.id))
+                Text(task.title)
+                  .decoration(task.completed ? { type: TextDecorationType.LineThrough, color: '#999' } : undefined)
+              }.width('100%').padding(10)
+            }
+          }, (task: TaskModel): number => task.id)
+        }.layoutWeight(1)
+      }
+    }.width('100%').height('100%')
+  }
+}
+```
+
+> **分层原则**：① **View 不直接调用 Model**，通过 ViewModel 操作数据；② **Model 不依赖 UI**，只定义数据结构；③ **ViewModel 持有所有业务状态**，提供派生计算属性；④ 状态更新始终用不可变模式（`[...arr, newItem]`、`{ ...obj, field: val }`）。
 
 ---
 

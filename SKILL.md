@@ -28,6 +28,8 @@ description: Generate correct, compilable ArkTS code for HarmonyOS NEXT (API 12+
 
 **门禁**: 无前置条件。此步骤是入口，始终允许执行。
 
+> 🚀 **新项目？** `bash scripts/scaffold.sh <项目名> <com.example.app>` 一键生成 Stage 模型 + Navigation 骨架 + 自动执行本步骤。
+
 扫描项目当前状态，并将结果写入检查点文件：
 
 ```bash
@@ -82,16 +84,11 @@ print('✓ 00-scan.json written')
 bash scripts/self-check.sh <项目根目录>
 ```
 
-脚本自动扫描以下 9 项并输出 PASS/FAIL：
-- Pass 1: `@ohos.*` 旧式导入
-- Pass 2: `new Function()` 动态执行
-- Pass 3: `Select.options()` 未文档化 API
-- Pass 4: `@State height/weight` 属性冲突
-- Pass 5: `router.pushUrl` 缺 RouterMode
-- Pass 6: `ForEach` 缺 key 生成器
-- Pass 7: import 不在文件顶部
-- Pass 8: `any`/`unknown`/`var` 禁用关键字
-- Pass 9: ForEach 回调中未使用的 index/idx 参数
+脚本自动扫描以下 25 项并输出 PASS/FAIL/⚠️WARNING：
+- Pass 1-13: 基础语法检查（@ohos 旧导入、new Function、@State 冲突、router RouterMode、ForEach key、any/var 禁用、localhost 检测、INTERNET 权限、displayPriority 小数）
+- Pass 14-17: 编程规范（要求级）— 多变量同行、NaN 比较、条件赋值、finally 控制流
+- Pass 18、23: 状态管理性能 — @Prop→@ObjectLink 建议、循环内状态读取
+- Pass 19-22、24-25: 组件规范 — fontSize 误用、Alignment.Left/Right、Shape 缺 stroke、@State 位置、Color 枚举、export default
 
 **脚本失败时（exit code ≠ 0）**: 根据输出修复 → 重新运行直到 PASS → 才进入 Step 3。
 
@@ -143,7 +140,15 @@ bash scripts/self-check.sh <项目根目录>
 
 **V2 规则（API 12+ 推荐）**：组件用 `@ComponentV2`，内部状态 `@Local`，父传子 `@Param`，子传父 `@Event`，双向绑定 `this!!.var`，派生计算 `@Computed`。V1 和 V2 不可在同一组件混用。
 
+**性能规则（官方最佳实践）**：
+- 对象/class 类型用 `@ObjectLink` 替代 `@Prop`——`@Prop` 做深拷贝，`@ObjectLink` 引用共享
+- 每个状态变量关联组件 ≤ 20 个，超出则提升到父组件
+- 循环内避免直接读取 `@State`/`@Link`，先提取到局部变量
+- 装饰器优先级：`@State` 系列 > `@Provide`+`@Consume` > `LocalStorage` > `AppStorage`
+- 父子场景用 `@State`+`@Prop/@Link`，跨层级才用 `@Provide`+`@Consume`
+
 > 完整 V2 装饰器表、迁移指南、常见错误 → [REFERENCE.md](REFERENCE.md)「状态管理（V2）」+ [PITFALLS.md](PITFALLS.md)「V2 状态管理常见错误」。
+> 装饰器选择决策树 + 初始化约束矩阵 → [REFERENCE.md](REFERENCE.md)「状态管理性能规则」
 
 ### 导入路径（最高频错误来源）
 
@@ -187,52 +192,31 @@ entry/src/main/
 └── module.json5         # 权限声明
 ```
 
-**组件导出规范**：可复用组件（`components/` 目录下）必须用 `export default` 导出，引用时用默认导入：
-
-```typescript
-// components/MyComponent.ets
-@Component
-struct MyComponent { /* ... */ }
-export default MyComponent
-
-// pages/Index.ets
-import MyComponent from '../components/MyComponent'
-```
+**组件导出规范**：可复用组件（`components/` 目录下）必须用 `export default` 导出，引用时用默认导入。代码示例 → [REFERENCE.md](REFERENCE.md)
 
 ### 页面注册与路由
 
-`resources/base/profile/main_pages.json`:
+> ⚠️ **Router 已停止功能更新**（页面栈 32 上限、不支持跨设备、深拷贝传参）。华为官方推荐 **Navigation + NavPathStack** 作为长期演进方案。[官方对比](https://developer.huawei.com/consumer/cn/doc/harmonyos-faqs-V5/faqs-arkui-299-V5)
+
+**推荐方案：Navigation（API 12+）**
+
+`resources/base/profile/route_map.json`:
 ```json
-{ "src": [ "pages/Index", "pages/Detail" ] }
+{ "routerMap": [{ "name": "DetailPage", "pageSourceFile": "src/main/ets/pages/Detail.ets", "buildFunction": "DetailBuilder" }] }
 ```
+`module.json5` 声明: `"routerMap": "$profile:route_map"`。页面用 `@Builder` 导出，`NavPathStack.pushPathByName('DetailPage', params)` 跳转。
 
-跳转（路径不以 `/` 开头，必须与 main_pages.json 一致；**API 12+ 返回 Promise，旧三参数回调已废弃**）:
-```typescript
-import { router } from '@kit.ArkUI'
-router.pushUrl({ url: 'pages/Detail', params: { id: 123 } }, router.RouterMode.Standard)
-  .then((): void => { /* 成功 */ }).catch((err: Error): void => { console.error(err.message) })
-```
-返回: `router.back({ url: 'pages/Index' })`（目标页须在栈中）。拦截返回: `router.showAlertBeforeBackPage({ message: '...' })`。清空栈: `router.clear()`。
-接收参数: `const params = router.getParams() as Record<string, Object>`（无参返回 undefined，**必须先判空**）。
+**旧方案：Router（仅维护旧项目）**
 
-> 中大型项目推荐 **Navigation + NavPathStack** 替代 router。
+`main_pages.json`: `{ "src": ["pages/Index", "pages/Detail"] }`。跳转：`router.pushUrl({ url: 'pages/Detail' }, router.RouterMode.Standard).then(...)`。接收：`router.getParams()` 先判空。
+
+> 完整 Navigation API（NavPathStack/NavDestination/路由表/跨模块路由解耦）→ [REFERENCE.md](REFERENCE.md)「Navigation 路由」
 
 ### 权限声明
 
-`module.json5`:
-```json
-{ "module": { "requestPermissions": [
-  { "name": "ohos.permission.CAMERA" },
-  { "name": "ohos.permission.INTERNET" }
-]}}
-```
+`module.json5` 中声明：`"requestPermissions": [{ "name": "ohos.permission.INTERNET" }, ...]`。运行时申请：`abilityAccessCtrl.createAtManager().requestPermissionsFromUser(context, ['ohos.permission.CAMERA'])`。
 
-运行时申请：
-```typescript
-import { abilityAccessCtrl, Permissions } from '@kit.AbilityKit'
-const mgr = abilityAccessCtrl.createAtManager()
-mgr.requestPermissionsFromUser(context, ['ohos.permission.CAMERA'])
-```
+> 完整 module.json5 模板 + 权限列表 → [REFERENCE.md](REFERENCE.md)「模块声明文件」
 
 ### 图形绘制组件 (Shape)
 
