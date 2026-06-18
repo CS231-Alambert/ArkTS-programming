@@ -22,12 +22,49 @@ bash scripts/install-hooks.sh
 
 ```
 harmonyos-arkts/
-├── SKILL.md        (~300行) — 始终注入 system prompt：门禁流程 + 核心规则 + 检查清单 + Hook指南 + 指针
+├── SKILL.md        (~320行) — 始终注入 system prompt：门禁流程 + 核心规则 + 检查清单 + Hook指南 + MCP工具路由
 ├── REFERENCE.md    (1308行) — 按需 Read，顶部 30 条索引
 ├── PITFALLS.md     (~1530行) — 双索引：13 类主题树 + 60+ 条源索引
 ├── EXAMPLES.md     (3077行) — 按需 Read，顶部 44 条索引
 ├── README.md        — 本文件
-└── scripts/
+├── scripts/         — self-check.sh, scaffold.sh, quick-check.sh
+├── arkagent/        — ArkAgent MCP Server（FastMCP，11 工具）
+│   ├── server.py    — 入口 + lifespan 索引管理
+│   ├── indexer/     — TF-IDF 搜索索引（80 文件，141 API）
+│   └── tools/       — 知识检索(4) + 代码验证(4) + 门禁管道(3)
+├── docs/            — 知识库（4 分类 80 文档 763KB）
+│   ├── arkweb/      — ArkWeb 方舟Web（42 文档）
+│   ├── arkts/       — ArkTS 方舟编程语言（15 文档）
+│   ├── arkui/       — ArkUI 方舟UI框架（6 文档）
+│   └── ui-design-kit/ — UI Design Kit（15 文档）
+└── pyproject.toml   — Python 项目配置
+```
+
+## ArkAgent MCP Server
+
+独立运行的 MCP Server，提供 80 文档知识库的索引化搜索 + 25 项代码验证 + 门禁管道。
+
+```bash
+# 安装
+cd arkagent && pip install -e .
+
+# 启动 MCP（注册到 Claude Code 的 .claude.json mcpServers）
+python3 -m arkagent.cli mcp
+
+# 重建搜索索引
+python3 -m arkagent.cli rebuild-index
+
+# 批量抓取华为开发者文档（需要 Playwright）
+bash scripts/fetch_all.sh all
+```
+
+### 11 个 MCP 工具
+
+| 类别 | 工具 | 用途 |
+|------|------|------|
+| 知识 | `search_docs` `api_lookup` `find_example` `list_topics` | 80 文档 TF-IDF 搜索 |
+| 验证 | `validate_imports` `check_syntax`(25项) `check_state_mgmt` `scan_project` | 代码质量检查 |
+| 门禁 | `gate_scan` `gate_check` `gate_status` | 4-step 硬门禁流水线 |
     ├── scaffold.sh       — 一键生成 Stage + Navigation 项目骨架 + 自动 Step 0
     ├── self-check.sh     — 25 项自动检查 + 三层架构扫描 + 规则分层 + 历史累积
     ├── quick-check.sh    — Hook 用静默巡检（默认 9 项关键 pass，PASS 不输出）

@@ -1,0 +1,12 @@
+[使用运动和方向传感器监测设备状态](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-sensor)
+[Web组件渲染模式](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-render-mode)
+意见反馈
+以上内容对您是否有帮助？
+*
+*
+*
+*
+意见反馈
+如果您有其他疑问，您也可以通过开发者社区问答频道来和我们联系探讨。
+[社区提问](https://developer.huawei.com/consumer/cn/forum/)
+[智能客服提问](https://developer.huawei.com/consumer/cn/customerService/#/bot-dev-top/faq-top/faq-talk-top)

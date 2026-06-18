@@ -1,0 +1,11 @@
+# ArkAgent generated files
+arkagent/indexer/index.json
+__pycache__/
+*.pyc
+*.pyo
+.arkts-check/
+
+# Python
+*.egg-info/
+dist/
+build/

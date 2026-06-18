@@ -1,0 +1,12 @@
+[获取网页内容高度](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-getpage-height)
+[应用侧调用前端页面函数](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-in-app-frontend-page-function-invoking)
+意见反馈
+以上内容对您是否有帮助？
+*
+*
+*
+*
+意见反馈
+如果您有其他疑问，您也可以通过开发者社区问答频道来和我们联系探讨。
+[社区提问](https://developer.huawei.com/consumer/cn/forum/)
+[智能客服提问](https://developer.huawei.com/consumer/cn/customerService/#/bot-dev-top/faq-top/faq-talk-top)

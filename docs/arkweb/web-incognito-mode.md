@@ -1,0 +1,25 @@
+开发者在创建Web组件时，可以将可选参数incognitoMode设置为true，来开启Web组件的隐私模式。使用隐私模式浏览网页时，Cookie、缓存等数据不会写入本地持久化存储；隐私模式的Web组件销毁后，这些数据将被清除，不会保留。
+
+创建隐私模式的Web组件。
+
+通过isIncognitoMode判断当前Web组件是否是隐私模式。
+
+隐私模式提供了一系列接口，用于操作地理位置、Cookie以及Cache Data。
+
+通过allowGeolocation设置隐私模式下的Web组件允许指定来源使用地理位置。
+
+通过deleteGeolocation清除隐私模式下指定来源的地理位置权限状态。
+
+通过getAccessibleGeolocation以回调方式异步获取隐私模式下指定源的地理位置权限状态。
+
+通过deleteAllData清除隐私模式下Web SQL当前使用的所有存储。
+
+加载的html文件。
+
+通过fetchCookieSync获取隐私模式下指定url对应cookie的值。
+
+通过configCookieSync设置隐私模式下指定url的单个cookie的值。
+
+通过existCookie查询隐私模式下是否存在cookie。
+
+通过clearAllCookiesSync清除隐私模式下所有cookie。

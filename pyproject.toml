@@ -1,0 +1,20 @@
+[project]
+name = "arkagent"
+version = "0.1.0"
+description = "ArkAgent MCP Server — HarmonyOS/ArkTS knowledge search + code validation"
+requires-python = ">=3.12"
+dependencies = [
+    "fastmcp>=3.0",
+    "jieba>=0.42",
+]
+license = "Apache-2.0"
+
+[project.scripts]
+arkagent = "arkagent.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["arkagent"]

@@ -316,3 +316,44 @@ entry/src/main/
 | [REFERENCE.md](REFERENCE.md) | API速查、导入路径、属性全表 | 查具体组件/属性的正确语法 |
 | [PITFALLS.md](PITFALLS.md) | 40+常见错误 | 按报错关键词或现象定位，取对应错误块 |
 | [EXAMPLES.md](EXAMPLES.md) | 32个可编译运行的完整示例 | 按场景关键词定位示例号，读对应几段 |
+
+### 官方文档知识库 (ArkAgent MCP)
+
+> KB 覆盖 4 个分类共 80 个文档：ArkWeb（42）/ ArkTS（15）/ UI Design Kit（15）/ ArkUI（6）
+
+**首选方式**：通过 ArkAgent MCP 工具精准查询（预建索引，单次调用，最低 Token 消耗）：
+
+**知识检索（4 工具）**：
+
+| 场景 | 使用工具 | 示例 |
+|------|---------|------|
+| API 查询 | `arkagent_api_lookup("apiName")` | `arkagent_api_lookup("registerJavaScriptProxy")` |
+| 全文搜索 | `arkagent_search_docs("query")` | `arkagent_search_docs("javaScriptProxy 注册方式")` |
+| 代码示例 | `arkagent_find_example("scenario")` | `arkagent_find_example("离线 Web 加载")` |
+| 主题列表 | `arkagent_list_topics()` | 查看所有可用主题、分类、文件大小 |
+
+**代码验证（4 工具）**：
+
+| 场景 | 使用工具 | 检查项 |
+|------|---------|--------|
+| 导入检查 | `arkagent_validate_imports("page.ets")` | @ohos→@kit 迁移 |
+| 语法检查 | `arkagent_check_syntax("page.ets")` | **25 种**编译阻断+编码规范错误 |
+| 状态管理 | `arkagent_check_state_mgmt(".")` | V1/V2 混用检测 |
+| 全项目扫描 | `arkagent_scan_project(".")` | 聚合所有检查 → 结构化报告 |
+
+**门禁管道（3 工具）**：
+
+| 场景 | 使用工具 | 说明 |
+|------|---------|------|
+| Step 0 扫描 | `arkagent_gate_scan()` | 扫描项目结构 → `.arkts-check/00-scan.json` |
+| Step 2 检查 | `arkagent_gate_check()` | 运行全部 25 检查 → `.arkts-check/02-checked.json` |
+| 状态查看 | `arkagent_gate_status()` | 查看 pipeline 各 step 完成状态 |
+
+**备用方式**（ArkAgent 不可用时）：grep + Read
+```bash
+grep -l "<关键词>" docs/{arkweb,arkts,arkui,ui-design-kit}/*.md  # 定位文件
+grep -n "<API名>" docs/arkweb/目标.md     # 定位行号
+Read offset=行号 docs/arkweb/目标.md       # 精准读取
+# 也可直接用 self-check.sh：
+bash scripts/self-check.sh .               # 硬门禁（25 检查）
+```
