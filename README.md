@@ -65,12 +65,19 @@ bash scripts/fetch_all.sh all
 | 知识 | `search_docs` `api_lookup` `find_example` `list_topics` | 80 文档 TF-IDF 搜索 |
 | 验证 | `validate_imports` `check_syntax`(25项) `check_state_mgmt` `scan_project` | 代码质量检查 |
 | 门禁 | `gate_scan` `gate_check` `gate_status` | 4-step 硬门禁流水线 |
-    ├── scaffold.sh       — 一键生成 Stage + Navigation 项目骨架 + 自动 Step 0
-    ├── self-check.sh     — 25 项自动检查 + 三层架构扫描 + 规则分层 + 历史累积
-    ├── quick-check.sh    — Hook 用静默巡检（默认 9 项关键 pass，PASS 不输出）
-    ├── health-report.sh  — 跨会话趋势分析
-    ├── install-hooks.sh  — 一键部署 PreToolUse + PostToolUse Hook
-    └── rules-template.json — L2 项目规则配置模板
+
+### scripts/ 工具集
+
+```
+scripts/
+├── scaffold.sh         — 一键生成 Stage + Navigation 项目骨架 + 自动 Step 0
+├── self-check.sh       — 25 项自动检查 + 三层架构扫描 + 规则分层 + 历史累积
+├── quick-check.sh      — Hook 用静默巡检（默认 9 项关键 pass，PASS 不输出）
+├── health-report.sh    — 跨会话趋势分析
+├── install-hooks.sh    — 一键部署 PreToolUse + PostToolUse Hook
+├── rules-template.json — L2 项目规则配置模板
+├── fetch_huawei_doc.py — Playwright HTML→MD 转换器
+└── fetch_all.sh        — 批量抓取华为 HarmonyOS 文档
 ```
 
 ## 闭合链条
