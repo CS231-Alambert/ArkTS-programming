@@ -1,0 +1,9 @@
+{
+  "module": {
+    "name": "entry",
+    "type": "entry",
+    "requestPermissions": [
+      {"name": "ohos.permission.INTERNET"}
+    ]
+  }
+}

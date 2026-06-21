@@ -1,23 +1,42 @@
 """Server configuration"""
 
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
 
+def _resolve(path: str) -> Path:
+    """Resolve a path that may be absolute or relative to this config file."""
+    p = Path(os.path.expandvars(path))
+    if p.is_absolute():
+        return p
+    return (Path(__file__).parent / p).resolve()
+
+
 @dataclass
 class ServerConfig:
-    """ArkAgent MCP server configuration."""
+    """ArkAgent MCP server configuration.
 
-    # Knowledge base path (root with subdirectories: arkweb/, arkts/, arkui/, ui-design-kit/)
-    kb_path: Path = Path(
-        "/root/.cc-switch/skills/harmonyos-arkts/docs"
-    )
+    All paths support environment variable overrides:
+      ARKAGENT_KB_PATH    — knowledge base root (subdirs: arkweb/, arkts/, arkui/, ui-design-kit/)
+      ARKAGENT_INDEX_PATH — TF-IDF index file
+      ARKAGENT_RULES_PATH — ArkTS rule definitions
+    """
 
-    # Index file path (generated at startup)
-    index_path: Path = Path("/root/ArkAgent/arkagent/indexer/index.json")
+    # Knowledge base path — default: ../docs relative to this config file
+    kb_path: Path = field(default_factory=lambda: _resolve(
+        os.environ.get("ARKAGENT_KB_PATH", "../docs")
+    ))
 
-    # Rules directory
-    rules_path: Path = Path("/root/.claude/rules/ecc/arkts")
+    # Index file path — generated at startup / rebuild
+    index_path: Path = field(default_factory=lambda: _resolve(
+        os.environ.get("ARKAGENT_INDEX_PATH", "indexer/index.json")
+    ))
+
+    # Rules directory — default: user-level ECC ArkTS rules
+    rules_path: Path = field(default_factory=lambda: _resolve(
+        os.environ.get("ARKAGENT_RULES_PATH", "/root/.claude/rules/ecc/arkts")
+    ))
 
     # Default max results per search
     max_search_results: int = 5

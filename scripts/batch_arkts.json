@@ -1,0 +1,87 @@
+[
+  {
+    "slug": "arkts-common-components-video-player",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-common-components-video-player"
+  },
+  {
+    "slug": "arkts-compilation-tool-chain",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-compilation-tool-chain"
+  },
+  {
+    "slug": "arkts-concurrency",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-concurrency"
+  },
+  {
+    "slug": "arkts-cross-language-interaction",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-cross-language-interaction"
+  },
+  {
+    "slug": "arkts-decorator-overview",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-decorator-overview"
+  },
+  {
+    "slug": "arkts-get-started",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-get-started"
+  },
+  {
+    "slug": "arkts-glossary",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-glossary"
+  },
+  {
+    "slug": "arkts-overview",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-overview"
+  },
+  {
+    "slug": "arkts-runtime",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-runtime"
+  },
+  {
+    "slug": "arkts-utils",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-utils"
+  },
+  {
+    "slug": "buffer",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/buffer"
+  },
+  {
+    "slug": "introduction-to-arkts",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/introduction-to-arkts"
+  },
+  {
+    "slug": "start-with-ets-stage",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/start-with-ets-stage"
+  },
+  {
+    "slug": "taskpool-introduction",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/taskpool-introduction"
+  },
+  {
+    "slug": "typescript-to-arkts-migration-guide",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/typescript-to-arkts-migration-guide"
+  },
+  {
+    "slug": "worker-introduction",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/worker-introduction"
+  },
+  {
+    "slug": "xml-overview",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/xml-overview"
+  }
+]

@@ -1,0 +1,402 @@
+[
+  {
+    "slug": "app-takeovers-web-media",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/app-takeovers-web-media"
+  },
+  {
+    "slug": "application-dev-overview",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/application-dev-overview"
+  },
+  {
+    "slug": "arkui-glossary",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkui-glossary"
+  },
+  {
+    "slug": "arkweb-glossary",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkweb-glossary"
+  },
+  {
+    "slug": "web-clipboard",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-clipboard"
+  },
+  {
+    "slug": "web-component-overview",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-component-overview"
+  },
+  {
+    "slug": "web-cookie-and-data-storage-mgmt",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-cookie-and-data-storage-mgmt"
+  },
+  {
+    "slug": "web-createpdf",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-createpdf"
+  },
+  {
+    "slug": "web-data-detector",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-data-detector"
+  },
+  {
+    "slug": "web-debugging",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-debugging"
+  },
+  {
+    "slug": "web-default-useragent",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-default-useragent"
+  },
+  {
+    "slug": "web-download",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-download"
+  },
+  {
+    "slug": "web-event-sequence",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-event-sequence"
+  },
+  {
+    "slug": "web-file-upload",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-file-upload"
+  },
+  {
+    "slug": "web-geolocation-permission",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-geolocation-permission"
+  },
+  {
+    "slug": "web-incognito-mode",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-incognito-mode"
+  },
+  {
+    "slug": "web-manage-cyber-security-privacy",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-manage-cyber-security-privacy"
+  },
+  {
+    "slug": "web-manage-loading-browsing",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-manage-loading-browsing"
+  },
+  {
+    "slug": "web-manage-page-interaction",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-manage-page-interaction"
+  },
+  {
+    "slug": "web-manage-upload-download",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-manage-upload-download"
+  },
+  {
+    "slug": "web-menu",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-menu"
+  },
+  {
+    "slug": "web-native-messaging",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-native-messaging"
+  },
+  {
+    "slug": "web-offline-mode",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-offline-mode"
+  },
+  {
+    "slug": "web-open-in-new-window",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-open-in-new-window"
+  },
+  {
+    "slug": "web-pdf-preview",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-pdf-preview"
+  },
+  {
+    "slug": "web-picture-in-picture",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-picture-in-picture"
+  },
+  {
+    "slug": "web-print",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-print"
+  },
+  {
+    "slug": "web-process-page-content",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-process-page-content"
+  },
+  {
+    "slug": "web-render-layout",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-render-layout"
+  },
+  {
+    "slug": "web-rtc",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-rtc"
+  },
+  {
+    "slug": "web-safe-area-insets",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-safe-area-insets"
+  },
+  {
+    "slug": "web-same-layer",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-same-layer"
+  },
+  {
+    "slug": "web-sensor",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-sensor"
+  },
+  {
+    "slug": "web-set-attributes-events",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-set-attributes-events"
+  },
+  {
+    "slug": "web-set-dark-mode",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-set-dark-mode"
+  },
+  {
+    "slug": "web-use-frontend-page-js",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-use-frontend-page-js"
+  },
+  {
+    "slug": "web-use-multimedia",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-use-multimedia"
+  },
+  {
+    "slug": "web_component_process",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web_component_process"
+  },
+  {
+    "slug": "web_full_screen",
+    "section": "arkweb",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web_full_screen"
+  },
+  {
+    "slug": "arkts-common-components-video-player",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-common-components-video-player"
+  },
+  {
+    "slug": "arkts-compilation-tool-chain",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-compilation-tool-chain"
+  },
+  {
+    "slug": "arkts-concurrency",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-concurrency"
+  },
+  {
+    "slug": "arkts-cross-language-interaction",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-cross-language-interaction"
+  },
+  {
+    "slug": "arkts-decorator-overview",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-decorator-overview"
+  },
+  {
+    "slug": "arkts-get-started",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-get-started"
+  },
+  {
+    "slug": "arkts-glossary",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-glossary"
+  },
+  {
+    "slug": "arkts-overview",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-overview"
+  },
+  {
+    "slug": "arkts-runtime",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-runtime"
+  },
+  {
+    "slug": "arkts-utils",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-utils"
+  },
+  {
+    "slug": "buffer",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/buffer"
+  },
+  {
+    "slug": "introduction-to-arkts",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/introduction-to-arkts"
+  },
+  {
+    "slug": "start-with-ets-stage",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/start-with-ets-stage"
+  },
+  {
+    "slug": "taskpool-introduction",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/taskpool-introduction"
+  },
+  {
+    "slug": "typescript-to-arkts-migration-guide",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/typescript-to-arkts-migration-guide"
+  },
+  {
+    "slug": "worker-introduction",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/worker-introduction"
+  },
+  {
+    "slug": "xml-overview",
+    "section": "arkts",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/xml-overview"
+  },
+  {
+    "slug": "arkts-glossary",
+    "section": "arkui",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-glossary"
+  },
+  {
+    "slug": "arkts-ui-development",
+    "section": "arkui",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-ui-development"
+  },
+  {
+    "slug": "arkts-use-ndk",
+    "section": "arkui",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-use-ndk"
+  },
+  {
+    "slug": "arkui-glossary",
+    "section": "arkui",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkui-glossary"
+  },
+  {
+    "slug": "arkui-overview",
+    "section": "arkui",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkui-overview"
+  },
+  {
+    "slug": "display-manager",
+    "section": "arkui",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/display-manager"
+  },
+  {
+    "slug": "ui-debug-optimize",
+    "section": "arkui",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/ui-debug-optimize"
+  },
+  {
+    "slug": "ui-js-dev",
+    "section": "arkui",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/ui-js-dev"
+  },
+  {
+    "slug": "window-manager",
+    "section": "arkui",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/window-manager"
+  },
+  {
+    "slug": "localization-glossary",
+    "section": "ui-design-kit",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/localization-glossary"
+  },
+  {
+    "slug": "ui-design-actionbar",
+    "section": "ui-design-kit",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/ui-design-actionbar"
+  },
+  {
+    "slug": "ui-design-custom-symbol-res-register",
+    "section": "ui-design-kit",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/ui-design-custom-symbol-res-register"
+  },
+  {
+    "slug": "ui-design-faq",
+    "section": "ui-design-kit",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/ui-design-faq"
+  },
+  {
+    "slug": "ui-design-hds-component-material",
+    "section": "ui-design-kit",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/ui-design-hds-component-material"
+  },
+  {
+    "slug": "ui-design-hds-tabs",
+    "section": "ui-design-kit",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/ui-design-hds-tabs"
+  },
+  {
+    "slug": "ui-design-icon-process",
+    "section": "ui-design-kit",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/ui-design-icon-process"
+  },
+  {
+    "slug": "ui-design-introduction",
+    "section": "ui-design-kit",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/ui-design-introduction"
+  },
+  {
+    "slug": "ui-design-list-item-card",
+    "section": "ui-design-kit",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/ui-design-list-item-card"
+  },
+  {
+    "slug": "ui-design-multiwindowentryinapp",
+    "section": "ui-design-kit",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/ui-design-multiwindowentryinapp"
+  },
+  {
+    "slug": "ui-design-navigation",
+    "section": "ui-design-kit",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/ui-design-navigation"
+  },
+  {
+    "slug": "ui-design-side-menu",
+    "section": "ui-design-kit",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/ui-design-side-menu"
+  },
+  {
+    "slug": "ui-design-sidebar",
+    "section": "ui-design-kit",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/ui-design-sidebar"
+  },
+  {
+    "slug": "ui-design-snackbar",
+    "section": "ui-design-kit",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/ui-design-snackbar"
+  },
+  {
+    "slug": "ui-design-visual-effect",
+    "section": "ui-design-kit",
+    "url": "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/ui-design-visual-effect"
+  }
+]
